@@ -1,0 +1,31 @@
+# Node
+node_modules
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# MacOS
+.DS_Store
+
+# Sensitive files
+apikeys.txt
+
+# Logs
+*.log
+
+# Docker
+*.docker
+
+# Misc
+temp/
+tmp/ 
