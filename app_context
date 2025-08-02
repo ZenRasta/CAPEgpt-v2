@@ -1,0 +1,156 @@
+CAPE students spend hours paging through old exam booklets hunting for worked examples. Cape GPT eliminates that friction: snap a photo of any past-paper question in Math, Additional Math, or Physics and instantly receive
+
+A step-by-step worked solution (rendered with proper math notation).
+
+A citation of every year that exact (or near-duplicate) question appeared.
+
+The official syllabus objective(s) it assesses.
+
+A data-driven “chance of re-appearance” estimate for exam strategy.
+
+The MVP is web-only (mobile-responsive) so it runs on laptops, tablets, and phone browsers without install friction.
+
+2. High-Level Architecture
+mathematica
+Copy
+Edit
+┌────────────────┐        ┌───────────────────┐        ┌───────────────────┐
+│ Front-End SPA  │ ─────► │  FastAPI Gateway  │ ─────► │  Supabase Vector  │
+│  React + Vite  │        │  (Python 3.11)    │        │  DB (pgvector)    │
+└────────────────┘        └───────────────────┘        └───────────────────┘
+        ▲                        │  ▲  │                        ▲
+        │                        │  │  │                        │
+        │                        │  │  └─►External OCR APIs     │
+        │                        │  │       • Google Vision     │
+        │                        │  │       • Mathpix           │
+        │                        │  │                          │
+        │                        │  └────► OpenAI Completion API│
+        │                        └──────── Retrieval Context ──┘
+Key flows
+
+Image → OCR
+
+Gateway inspects uploaded image.
+
+Lightweight classifier picks Google Vision for plain text or Mathpix for heavy equations.
+
+Output is clean text with LaTeX when available.
+
+Text → Vector Search
+
+Text is embedded (text-embedding-ada-002).
+
+Query top-k similar chunks in question_chunks (past papers) → yields (year, paper, question_id, chunk_text).
+
+Same embedding reused to query syllabus_chunks for syllabus topic(s).
+
+Answer Synthesis (Retrieval-Augmented Generation)
+
+Prompt = {user question + retrieved past-paper chunk(s) + syllabus snippet(s)}
+
+OpenAI GPT-4 (temperature 0) returns a markdown answer.
+
+Post-Processing
+
+Back-end appends verified year list & probability score computed from DB stats.
+
+LaTeX is wrapped for MathJax rendering.
+
+Display
+
+React chat bubble shows solution with rendered formulas and a collapsible “Exam Insights” panel (years, syllabus, probability).
+
+3. Data Plane
+Table	Purpose	Core Columns	Notes
+question_chunks	Vectorised past-paper questions	id, subject, year, paper, question_id, chunk_text, embedding	One row per full question/sub-question.
+syllabus_chunks	Vectorised syllabus objectives	id, subject, topic_title, chunk_text, embedding	Chunk by heading/objective.
+topic_stats (mat-view)	Pre-computed appearances per topic per year	subject, topic_title, year, occurrence_ct	Built nightly for fast probability calc.
+
+Indices: HNSW (vector_cosine_ops) on both embedding columns; B-tree on (subject, year).
+
+4. Core Micro-services (FastAPI)
+Path	Verb	Responsibilities	Auth*
+/upload	POST (multipart)	Accept user image; run classifier & OCR; return clean text.	public
+/query	POST (JSON)	Embed text → vector search → call GPT → assemble final answer JSON.	public
+/stats/topic	GET	Return topic frequency data (for probability calcs / dashboards).	future
+/auth/*	–	Optional Supabase JWT if future user accounts.	n/a
+
+*MVP is open; CORS locked to frontend origin. In v1.1 we can require anonymous Supabase session for rate tracking.
+
+5. Algorithmic Details
+5.1 OCR Decision Heuristic
+python
+Copy
+Edit
+def is_math_heavy(img_bytes):
+    """Return True if ≥10 math symbols detected in a fast Downsample+OCR pass
+       OR entropy pattern matches equation layouts."""
+If True → Mathpix REST /latex endpoint.
+
+Else → Google Vision DOCUMENT_TEXT_DETECTION.
+
+5.2 Similarity Search
+sql
+Copy
+Edit
+SELECT *, 1 - (embedding <=> :query_vec) AS score
+FROM question_chunks
+WHERE subject = :subject
+ORDER BY embedding <=> :query_vec
+LIMIT 8;
+Accept hits with score ≥ 0.80.
+
+Group identical chunk_text to gather years list.
+
+5.3 Probability Metric
+makefile
+Copy
+Edit
+P(topic, next_year) =  (#years topic appeared in last N) / N
+Category = {High ≥0.7, Med 0.3-0.7, Low <0.3}
+N default 10 but adapt to available data.
+
+6. Front-End UX Sketch
+Screen	Elements
+Home / Chat	• Drag-and-drop zone or “Take Photo” (mobile)
+• Subject picker dropdown
+• Chat history panel (scroll)
+• Spinner while processing
+• Answer card with tabs: Solution
+Error States	• “Couldn’t read your image – retry / recrop”
+• “Question not found in DB; still answering from concept”
+
+Styling via Tailwind CSS; equations via MathJax; image preview uses <img> with object-fit and rotate buttons.
+
+7. Quality & Risk Management
+Risk	Mitigation
+OCR mis-reads equation → wrong answer	Mathpix fallback; regex post-cleaning; allow user to edit OCR text before submit (v1.1).
+LLM hallucination of years/topics	Years list + syllabus topic are programmatically appended from DB, not generated by GPT.
+Latency (>8 s)	Parallelise OCR & embedding; stream GPT tokens to UI; cache answers keyed by hash(image).
+Cost spikes	Rate-limit free users; monitor monthly Vision/Mathpix usage against budget alerts.
+PDF ingestion backlog	Ingest job runs in Supabase Edge Function queue; chunk < 500 rows/min to avoid write limits.
+
+8. Deployment & Ops
+Layer	Platform	Notes
+DB + object storage	Supabase (Hobby tier initially)	Enables pgvector & RLS.
+API server	Fly.io or Railway (Docker)	Autoscale to zero; keeps keys server-side.
+Front-end	Vercel static hosting	Environment var for API URL.
+Monitoring	Supabase logs + OpenTelemetry traces sent to Axiom.	
+CI/CD	GitHub Actions – lint, pytest, build, deploy.	
+
+9. Road-map Snapshot
+Sprint	Goal	Key Deliverables
+0 (setup)	Repo + Supabase schema	Dockerfile, init SQL, env configs
+1	PDF ingest + embedding	OCR scripts, chunker, loader CLI
+2	Image upload → OCR → text	FastAPI /upload, classifier
+3	Vector search + GPT answer	/query, retrieval prompt, rendering
+4	Front-end chat & styling	React SPA, MathJax, UX polish
+5	Topic frequency + probability	Cron job to build topic_stats, UI panel
+6	Beta testing & hardening	Caching, logging, rate-limits, docs
+
+10. Core Decision Log (for posterity)
+Decision	Rationale
+Supabase + pgvector not Pinecone	Single platform for auth, storage, DB; pgvector HNSW is fast & cheap.
+Hybrid OCR (Vision + Mathpix)	Lowest blended $/query while preserving LaTeX quality where it counts.
+GPT-4 via API, not local model	Higher accuracy for multi-step CAPE math; quicker to MVP.
+React front-end	Dev familiarity, rich component ecosystem, easy MathJax integration.
