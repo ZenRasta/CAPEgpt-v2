@@ -19,6 +19,8 @@ venv/
 
 # Sensitive files
 apikeys.txt
+keys/
+*.json
 
 # Logs
 *.log

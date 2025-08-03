@@ -6,13 +6,23 @@ export default {
   ],
   theme: {
     extend: {
+      colors: {
+        brand: { 
+          blue: '#3b82f6', 
+          indigo: '#6366f1'
+        },
+      },
       fontFamily: {
-        'poppins': ['Poppins', 'sans-serif'],
+        'sans': ['Poppins', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+      borderRadius: {
+        '2xl': '1rem',
+      },
+      boxShadow: {
+        'soft': '0 12px 32px rgba(0,0,0,0.08)',
       },
       animation: {
-        'bounce': 'bounce 1s infinite',
         'fade-in': 'fadeIn 0.5s ease-out',
-        'pulse': 'pulse 2s infinite',
       },
       keyframes: {
         fadeIn: {
