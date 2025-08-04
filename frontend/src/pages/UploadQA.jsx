@@ -1,11 +1,26 @@
 import { useState } from 'react';
 
+function Hero() {
+  return (
+    <section className="relative bg-hero-gradient text-white">
+      <div className="container min-h-[240px] lg:min-h-[300px] flex flex-col items-center justify-center text-center">
+        <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tightish">
+          Drop Your Question 📸
+        </h1>
+        <p className="mt-3 text-lg lg:text-xl opacity-95 max-w-2xl">
+          Snap a CAPE question and get instant AI analysis
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function Section({ title, children }) {
   return (
     <section className="bg-brand-bg">
       <div className="container py-12 lg:py-16">
-        <h3 className="text-2xl lg:text-3xl font-extrabold text-brand-blue text-center">{title} 🔮</h3>
-        <div className="mt-6">{children}</div>
+        {title && <h2 className="text-2xl lg:text-3xl font-extrabold text-brand-blue text-center mb-6">{title}</h2>}
+        {children}
       </div>
     </section>
   );
@@ -13,7 +28,7 @@ function Section({ title, children }) {
 
 function Card({ children }) {
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-card hover:translate-y-[-2px] hover:shadow-xl transition">
+    <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-card hover:-translate-y-0.5 hover:shadow-xl transition">
       {children}
     </div>
   );
@@ -58,20 +73,22 @@ export default function UploadQA() {
   };
 
   return (
-    <Section title="Drop Your Question">
-      <div className="max-w-2xl mx-auto">
-        <Card>
+    <>
+      <Hero />
+      <Section>
+        <div className="max-w-2xl mx-auto">
+          <Card>
           {/* File Upload Area */}
           <div 
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors mb-6 ${
-              dragActive ? 'border-brand-blue bg-blue-50' : 'border-gray-300'
+            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors mb-6 ${
+              dragActive ? 'border-brand-blue bg-blue-50/80' : 'border-gray-300'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className="w-16 h-16 bg-gradient-to-r from-brand-blue to-brand-indigo rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-hero-gradient rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-3xl">📸</span>
             </div>
             <h4 className="text-lg font-semibold text-gray-900 mb-2">
@@ -82,7 +99,7 @@ export default function UploadQA() {
             </p>
             
             <label className="inline-flex items-center justify-center rounded-full bg-brand-blue text-white
-                             font-semibold px-6 py-3 hover:bg-brand-blue/90 transition cursor-pointer">
+                             font-semibold px-6 py-3 shadow-pill hover:shadow-lg hover:opacity-95 transition cursor-pointer">
               Choose File 📂
               <input
                 type="file"
@@ -147,7 +164,8 @@ export default function UploadQA() {
             Supported formats: PNG, JPG, PDF • Max file size: 10MB
           </p>
         </Card>
-      </div>
-    </Section>
+        </div>
+      </Section>
+    </>
   );
 }

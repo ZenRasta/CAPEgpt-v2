@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom';
 function Hero() {
   return (
     <section className="relative bg-hero-gradient text-white">
-      <div className="container min-h-[380px] lg:min-h-[460px] flex flex-col items-center justify-center text-center">
-        {/* Background translucent mega heading */}
-        <h1 aria-hidden className="select-none pointer-events-none absolute inset-x-0 top-10 hidden md:block
-          text-6xl lg:text-7xl font-extrabold opacity-10 tracking-tightish">
+      <div className="container min-h-[420px] lg:min-h-[480px] flex flex-col items-center justify-center text-center">
+        <h1 aria-hidden
+            className="select-none pointer-events-none absolute inset-x-0 top-10 hidden md:block
+                       text-6xl lg:text-7xl font-extrabold opacity-10 tracking-tightish">
           Your AI Buddy for CAPE Exams!
         </h1>
 
-        {/* Foreground heading + subcopy */}
         <h2 className="relative text-3xl lg:text-4xl font-extrabold tracking-tightish">
           Your AI Buddy for CAPE Exams! ✨
         </h2>
@@ -18,7 +17,6 @@ function Hero() {
           Snap questions, get lit solutions, and level up your game! 🎮
         </p>
 
-        {/* Pill CTA */}
         <div className="mt-6">
           <Link
             to="/upload"
@@ -45,7 +43,7 @@ function Section({ title, children }) {
 
 function Card({ children }) {
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-card hover:translate-y-[-2px] hover:shadow-xl transition">
+    <div className="bg-white rounded-3xl p-6 shadow-card hover:-translate-y-0.5 hover:shadow-xl transition">
       {children}
     </div>
   );
@@ -55,7 +53,6 @@ export default function Home() {
   return (
     <>
       <Hero />
-
       <Section title="Quick Vibes Examples">
         <Card>
           <h4 className="text-xl font-semibold">Differentiate f(x) = x²eˣ 🧮</h4>
@@ -66,15 +63,15 @@ export default function Home() {
           <Link to="/popular" className="mt-3 inline-block text-brand-blue font-semibold">View Solution ✨</Link>
         </Card>
       </Section>
-
       <Section title="Drop Your Question">
         <Card>
-          <p className="text-gray-700">Snap a past-paper question and we'll analyze it for strengths & weaknesses.</p>
+          <p className="text-gray-700">
+            Snap a past-paper question and we'll analyze it for strengths & weaknesses.
+          </p>
           <Link
             to="/upload"
             className="mt-4 inline-flex items-center justify-center rounded-full bg-brand-blue text-white
-                       font-semibold px-6 py-2 hover:bg-[#2f6fdb] transition"
-          >
+                       font-semibold px-6 py-2 hover:bg-[#2f6fdb] transition">
             Upload 📸
           </Link>
         </Card>
