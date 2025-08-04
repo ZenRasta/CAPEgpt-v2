@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { auth } from '../lib/supabaseClient';
 
 function Login() {
   const [loading, setLoading] = useState(false);
@@ -11,11 +10,10 @@ function Login() {
       setLoading(true);
       setError(null);
       
-      const { error: authError } = await auth.signInWithGoogle();
+      // Simulated login for demo purposes
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      window.location.href = '/';
       
-      if (authError) {
-        setError(authError.message);
-      }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
       console.error('Login error:', err);
@@ -26,8 +24,8 @@ function Login() {
 
   const handleGuestMode = () => {
     setGuestMode(true);
-    // Navigate to demo/guest experience
-    window.location.href = '/guest';
+    // Navigate to home as guest
+    window.location.href = '/';
   };
 
   return (

@@ -1,30 +1,17 @@
-/* Import Poppins font */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Gen-Alpha Brand Variables */
-:root { 
-  --brand-gradient: linear-gradient(to right, #3b82f6, #6366f1); 
-}
+html, body, #root { height: 100%; }
+body { font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
 
-/* Full height handling */
-html, body, #root { 
-  height: 100%; 
-}
-
-body { 
-  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; 
-}
-
-/* Brand gradient text utility */
+/* Helper for gradient text accents if needed */
 .gradient-text {
-  background: var(--brand-gradient);
+  background: linear-gradient(135deg,#3B82F6,#6366F1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 /* Reset and base styles */
