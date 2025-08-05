@@ -1,6 +1,13 @@
 export default {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   darkMode: 'class',
+  safelist: [
+    'w-[300px]',
+    'h-[300px]',
+    'btn-primary',
+    'btn-secondary',
+    'bg-hero-radial'
+  ],
   theme: {
     container: {
       center: true,

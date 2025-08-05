@@ -6,24 +6,17 @@ import Home from './pages/Home';
 import UploadQA from './pages/UploadQA';
 import { GlassCard, GlassButton } from './components/GlassCard';
 import { motion } from 'framer-motion';
+import FullPageSpinner from './components/FullPageSpinner';
 
 // Protected route wrapper
 const Protected = ({ children }) => {
   const { session, loading } = useAuth();
   
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-electric-cyan border-t-transparent rounded-full"
-        />
-      </div>
-    );
+    return <FullPageSpinner />;
   }
   
-  if (session === null) {
+  if (!session) {
     return <Navigate to="/login" replace />;
   }
   

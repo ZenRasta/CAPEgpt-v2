@@ -125,3 +125,52 @@ body {
 .animate-glow {
   animation: pulseGlow 6s ease-in-out infinite;
 }
+
+/* Button styles */
+.btn-primary {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #9146FF 0%, #FF5DA2 100%);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: pulseGlow 6s ease-in-out infinite;
+}
+
+.btn-primary:hover {
+  transform: scale(1.02);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  padding: 1rem 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+  color: #23F0FF;
+  border: 1px solid rgba(35, 240, 255, 0.3);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, rgba(35, 240, 255, 0.1), rgba(35, 240, 255, 0.05));
+  transform: scale(1.02);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
