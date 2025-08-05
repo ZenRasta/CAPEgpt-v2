@@ -1,50 +1,24 @@
 import { useState } from 'react';
-
-function Hero() {
-  return (
-    <section className="relative bg-hero-gradient text-white">
-      <div className="container min-h-[240px] lg:min-h-[300px] flex flex-col items-center justify-center text-center">
-        <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tightish">
-          Drop Your Question 📸
-        </h1>
-        <p className="mt-3 text-lg lg:text-xl opacity-95 max-w-2xl">
-          Snap a CAPE question and get instant AI analysis
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <section className="bg-brand-bg">
-      <div className="container py-12 lg:py-16">
-        {title && <h2 className="text-2xl lg:text-3xl font-extrabold text-brand-blue text-center mb-6">{title}</h2>}
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function Card({ children }) {
-  return (
-    <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-card hover:-translate-y-0.5 hover:shadow-xl transition">
-      {children}
-    </div>
-  );
-}
+import { motion } from 'framer-motion';
+import { GlassCard, GlassButton } from '../components/GlassCard';
 
 export default function UploadQA() {
-  const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [subject, setSubject] = useState('Pure Mathematics');
+  const [answerFile, setAnswerFile] = useState(null);
+  const [answer, setAnswer] = useState('');
+  const [dragActive, setDragActive] = useState(false);
 
-  const subjects = [
-    'Pure Mathematics',
-    'Applied Mathematics', 
-    'Physics',
-    'Chemistry'
-  ];
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleAnswerFileSelect = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setAnswerFile(e.target.files[0]);
+    }
+  };
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -66,106 +40,195 @@ export default function UploadQA() {
     }
   };
 
-  const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.3
+      }
+    }
+  };
+
+  const sectionVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+      opacity: 1, 
+      y: 0,
+      transition: { 
+        duration: 0.6,
+        ease: "easeOut"
+      }
     }
   };
 
   return (
-    <>
-      <Hero />
-      <Section>
-        <div className="max-w-2xl mx-auto">
-          <Card>
-          {/* File Upload Area */}
-          <div 
-            className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors mb-6 ${
-              dragActive ? 'border-brand-blue bg-blue-50/80' : 'border-gray-300'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+      className="py-8"
+    >
+      {/* Hero Section */}
+      <motion.section 
+        className="container mx-auto px-4 mb-16"
+        variants={sectionVariants}
+      >
+        <div className="text-center mb-12">
+          <motion.h1 
+            className="text-5xl md:text-6xl font-extrabold mb-6 gen-gradient-text tracking-tight"
+            animate={{ 
+              textShadow: [
+                "0 0 20px rgba(35, 240, 255, 0.5)",
+                "0 0 40px rgba(255, 93, 162, 0.5)",
+                "0 0 20px rgba(35, 240, 255, 0.5)"
+              ]
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           >
-            <div className="w-16 h-16 bg-hero-gradient rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">📸</span>
-            </div>
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">
-              Upload Your CAPE Question
-            </h4>
-            <p className="text-gray-600 mb-4">
-              Drag and drop an image here, or click to browse
-            </p>
-            
-            <label className="inline-flex items-center justify-center rounded-full bg-brand-blue text-white
-                             font-semibold px-6 py-3 shadow-pill hover:shadow-lg hover:opacity-95 transition cursor-pointer">
-              Choose File 📂
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-            </label>
-            
-            {selectedFile && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-green-700 text-sm font-medium">
-                  📸 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}KB)
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Subject Selection */}
-          <div className="mb-6">
-            <label className="block text-lg font-semibold text-gray-900 mb-3">
-              Choose Your Subject 🎓
-            </label>
-            <select 
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full p-4 rounded-2xl border-2 border-gray-200 focus:border-brand-blue focus:outline-none font-medium"
-            >
-              {subjects.map(subj => (
-                <option key={subj} value={subj}>
-                  {subj === 'Pure Mathematics' ? 'Pure Math 📊' : 
-                   subj === 'Applied Mathematics' ? 'Applied Math 📈' : 
-                   subj === 'Physics' ? 'Physics ⚡' :
-                   'Chemistry 🧪'}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Text Input */}
-          <div className="mb-6">
-            <label className="block text-lg font-semibold text-gray-900 mb-3">
-              Or Type Your Question 💭
-            </label>
-            <textarea
-              placeholder="Paste your question text here..."
-              rows="4"
-              className="w-full p-4 border-2 border-gray-200 rounded-2xl focus:border-brand-blue focus:outline-none resize-none"
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="text-center">
-            <button className="inline-flex items-center justify-center rounded-full bg-brand-blue text-white
-                               font-semibold px-8 py-3 shadow-pill hover:shadow-lg hover:opacity-95 transition">
-              Analyze Question 🚀
-            </button>
-          </div>
-
-          {/* Helper Text */}
-          <p className="text-center text-sm text-gray-500 mt-4">
-            Supported formats: PNG, JPG, PDF • Max file size: 10MB
+            DROP YOUR QUESTION 📸
+          </motion.h1>
+          <p className="text-xl text-white/90 font-medium tracking-wide max-w-2xl mx-auto">
+            SNAP A PAST-PAPER QUESTION AND GET INSTANT AI ANALYSIS
           </p>
-        </Card>
         </div>
-      </Section>
-    </>
+      </motion.section>
+
+      {/* File Upload Section */}
+      <motion.section 
+        className="container mx-auto px-4 mb-16"
+        variants={sectionVariants}
+      >
+        <div className="max-w-2xl mx-auto">
+          <GlassCard className="p-8">
+            <h2 className="text-2xl font-bold mb-6 text-center gen-gradient-text tracking-wide">
+              UPLOAD QUESTION IMAGE
+            </h2>
+            
+            {/* Drag & Drop Area */}
+            <div 
+              className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all mb-6 ${
+                dragActive 
+                  ? 'border-electric-cyan bg-electric-cyan/10' 
+                  : 'border-white/30 hover:border-lime-slush/50'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <motion.div 
+                className="w-20 h-20 bg-gradient-to-r from-lime-slush to-electric-cyan rounded-full flex items-center justify-center mx-auto mb-6"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <span className="text-4xl">📸</span>
+              </motion.div>
+              
+              <h3 className="text-xl font-bold text-white mb-4 tracking-wide">
+                DRAG & DROP OR CLICK TO UPLOAD
+              </h3>
+              <p className="text-white/80 mb-6 font-medium">
+                PNG, JPG, PDF • Max file size: 10MB
+              </p>
+              
+              <label className="cursor-pointer">
+                <GlassButton variant="secondary" className="font-bold tracking-wide">
+                  CHOOSE FILE 📂
+                </GlassButton>
+                <input
+                  type="file"
+                  accept=".png,.jpg,.jpeg,.pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </label>
+              
+              {selectedFile && (
+                <motion.div 
+                  className="mt-6 gen-glass-card p-4 bg-lime-slush/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <p className="text-lime-slush font-bold text-sm">
+                    📸 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}KB)
+                  </p>
+                </motion.div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+      </motion.section>
+
+      {/* Answer Submission Section */}
+      <motion.section 
+        className="container mx-auto px-4 mb-16"
+        variants={sectionVariants}
+      >
+        <div className="max-w-2xl mx-auto">
+          <GlassCard className="p-8">
+            <h2 className="text-2xl font-bold mb-6 text-center gen-gradient-text tracking-wide">
+              ✍️ SUBMIT YOUR ANSWER FOR FEEDBACK 📝
+            </h2>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-white font-semibold mb-3 tracking-wide">
+                  TYPE YOUR ANSWER 💭
+                </label>
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  className="w-full p-4 bg-white/10 border border-white/20 rounded-2xl 
+                           text-white placeholder-white/60 focus:outline-none focus:border-electric-cyan 
+                           focus:ring-2 focus:ring-electric-cyan/50 transition-all backdrop-blur-sm"
+                  rows="6"
+                  placeholder="Type or upload your answer here... 💡"
+                />
+              </div>
+
+              <div className="text-center">
+                <p className="text-white/80 mb-4 font-medium">OR</p>
+                <label className="cursor-pointer">
+                  <GlassButton variant="secondary" className="font-bold tracking-wide">
+                    UPLOAD ANSWER 📤
+                  </GlassButton>
+                  <input
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.pdf,.txt"
+                    onChange={handleAnswerFileSelect}
+                    className="hidden"
+                  />
+                </label>
+                
+                {answerFile && (
+                  <motion.div 
+                    className="mt-4 gen-glass-card p-3 bg-bubblegum-pink/20"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <p className="text-bubblegum-pink font-bold text-sm">
+                      📤 {answerFile.name}
+                    </p>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="text-center pt-4">
+                <GlassButton 
+                  variant="primary" 
+                  className="text-xl px-12 py-4 font-bold tracking-wide"
+                  disabled={!selectedFile && !answer.trim()}
+                >
+                  ANALYZE NOW 🚀
+                </GlassButton>
+              </div>
+            </div>
+          </GlassCard>
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }
