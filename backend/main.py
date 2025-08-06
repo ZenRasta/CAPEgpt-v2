@@ -48,6 +48,11 @@ try:
     openai_client = OpenAI(base_url='https://openrouter.ai/api/v1', api_key=OPENROUTER_API_KEY)
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     logger.info("Successfully initialized all clients")
+    # Debug: Check if API keys are loaded
+    logger.info(f"MATHPIX_APP_ID loaded: {'Yes' if MATHPIX_APP_ID else 'No'}")
+    logger.info(f"MATHPIX_APP_KEY loaded: {'Yes' if MATHPIX_APP_KEY else 'No'}")
+    logger.info(f"GOOGLE_CREDENTIALS path: {GOOGLE_CREDENTIALS}")
+    logger.info(f"OPENROUTER_API_KEY loaded: {'Yes' if OPENROUTER_API_KEY else 'No'}")
 except Exception as e:
     logger.error(f"Failed to initialize clients: {e}")
     raise
@@ -537,9 +542,17 @@ def upload_to_storage(file_bytes: bytes, filename: str, user_id: str) -> str:
             {"content-type": f"image/{file_extension}" if file_extension in ['png', 'jpg', 'jpeg'] else "application/octet-stream"}
         )
         
-        if response.get('error'):
-            raise Exception(f"Storage upload failed: {response['error']}")
+        # Check if upload was successful (new Supabase client format)
+        if hasattr(response, 'error') and response.error:
+            raise Exception(f"Storage upload failed: {response.error}")
         
+        # For newer versions of supabase-py, check the data attribute
+        if hasattr(response, 'data') and response.data is None:
+            # If data is None, there might be an error
+            if hasattr(response, 'error') and response.error:
+                raise Exception(f"Storage upload failed: {response.error}")
+        
+        logger.info(f"File uploaded successfully to: {storage_path}")
         return storage_path
         
     except Exception as e:
@@ -606,16 +619,25 @@ async def process_question_async(question_id: str, file_bytes: bytes, filename: 
         
         if mathpix_result.error:
             # Try Google Vision as fallback
-            is_math = is_math_heavy(file_bytes)
-            fallback_text = ocr_image(file_bytes, is_math)
-            
-            # Update with fallback results
-            supabase.table('questions').update({
-                'ocr_fallback_text': fallback_text,
-                'processing_status': 'completed',
-                'processing_error': mathpix_result.error,
-                'updated_at': datetime.now().isoformat()
-            }).eq('id', question_id).execute()
+            try:
+                is_math = is_math_heavy(file_bytes)
+                fallback_text = ocr_image(file_bytes, is_math)
+                
+                # Update with fallback results
+                supabase.table('questions').update({
+                    'ocr_fallback_text': fallback_text,
+                    'processing_status': 'completed',
+                    'processing_error': mathpix_result.error,
+                    'updated_at': datetime.now().isoformat()
+                }).eq('id', question_id).execute()
+            except Exception as fallback_error:
+                # Both MathPix and Google Vision failed - provide helpful message
+                error_msg = "OCR services are not configured. Please upload a text description of your question or configure OCR APIs."
+                supabase.table('questions').update({
+                    'processing_status': 'failed',
+                    'processing_error': error_msg,
+                    'updated_at': datetime.now().isoformat()
+                }).eq('id', question_id).execute()
         else:
             # Classify the question
             classification = classify_question(mathpix_result.markdown, filename)
@@ -937,7 +959,7 @@ async def upload_question(file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="Empty file")
         
         # For now, use a mock user ID (in production, get from auth)
-        user_id = "mock-user-id"  # TODO: Replace with auth.uid() when auth is implemented
+        user_id = "00000000-0000-0000-0000-000000000001"  # Mock UUID format for testing
         
         # Upload to storage
         storage_path = upload_to_storage(file_bytes, file.filename, user_id)
@@ -946,7 +968,15 @@ async def upload_question(file: UploadFile = File(...)):
         signed_url_response = supabase.storage.from_("questions").create_signed_url(
             storage_path, 60 * 60 * 24  # 24 hours
         )
-        signed_url = signed_url_response.get('signedURL') if signed_url_response else None
+        # Handle new Supabase client format for signed URL
+        signed_url = None
+        if signed_url_response:
+            if hasattr(signed_url_response, 'data') and signed_url_response.data:
+                signed_url = signed_url_response.data.get('signedURL') if isinstance(signed_url_response.data, dict) else signed_url_response.data
+            elif hasattr(signed_url_response, 'signedURL'):
+                signed_url = signed_url_response.signedURL
+            elif isinstance(signed_url_response, dict):
+                signed_url = signed_url_response.get('signedURL')
         
         # Create question record
         question_data = {
@@ -989,6 +1019,7 @@ class QuestionResponse(BaseModel):
     mathpix_svg: Optional[str]
     uses_svg: bool
     processing_status: str
+    processing_error: Optional[str]
     subject: Optional[str]
     topics: Optional[List[str]]
     created_at: str
@@ -999,7 +1030,7 @@ async def get_question(question_id: str):
     """Get a specific question by ID."""
     try:
         # For now, use mock user ID (in production, get from auth and filter by user)
-        user_id = "mock-user-id"
+        user_id = "00000000-0000-0000-0000-000000000001"  # Mock UUID format for testing
         
         result = supabase.table('questions').select('*').eq('id', question_id).eq('user_id', user_id).execute()
         
@@ -1015,7 +1046,14 @@ async def get_question(question_id: str):
                 signed_url_response = supabase.storage.from_("questions").create_signed_url(
                     question['storage_path'], 60 * 60 * 24  # 24 hours
                 )
-                signed_url = signed_url_response.get('signedURL') if signed_url_response else signed_url
+                # Handle new Supabase client format for signed URL
+                if signed_url_response:
+                    if hasattr(signed_url_response, 'data') and signed_url_response.data:
+                        signed_url = signed_url_response.data.get('signedURL') if isinstance(signed_url_response.data, dict) else signed_url_response.data
+                    elif hasattr(signed_url_response, 'signedURL'):
+                        signed_url = signed_url_response.signedURL
+                    elif isinstance(signed_url_response, dict):
+                        signed_url = signed_url_response.get('signedURL')
             except Exception as e:
                 logger.warning(f"Failed to refresh signed URL: {e}")
         
@@ -1026,6 +1064,7 @@ async def get_question(question_id: str):
             mathpix_svg=question.get('mathpix_svg'),
             uses_svg=question.get('uses_svg', False),
             processing_status=question['processing_status'],
+            processing_error=question.get('processing_error'),
             subject=question.get('subject'),
             topics=question.get('topics', []),
             created_at=question['created_at'],
@@ -1047,7 +1086,7 @@ async def list_questions(limit: int = 20, offset: int = 0, subject: Optional[str
     """List user's questions with pagination."""
     try:
         # For now, use mock user ID (in production, get from auth)
-        user_id = "mock-user-id"
+        user_id = "00000000-0000-0000-0000-000000000001"  # Mock UUID format for testing
         
         query = supabase.table('questions').select('*').eq('user_id', user_id)
         
@@ -1070,7 +1109,14 @@ async def list_questions(limit: int = 20, offset: int = 0, subject: Optional[str
                     signed_url_response = supabase.storage.from_("questions").create_signed_url(
                         question['storage_path'], 60 * 60 * 24  # 24 hours
                     )
-                    signed_url = signed_url_response.get('signedURL') if signed_url_response else signed_url
+                    # Handle new Supabase client format for signed URL
+                    if signed_url_response:
+                        if hasattr(signed_url_response, 'data') and signed_url_response.data:
+                            signed_url = signed_url_response.data.get('signedURL') if isinstance(signed_url_response.data, dict) else signed_url_response.data
+                        elif hasattr(signed_url_response, 'signedURL'):
+                            signed_url = signed_url_response.signedURL
+                        elif isinstance(signed_url_response, dict):
+                            signed_url = signed_url_response.get('signedURL')
                 except Exception as e:
                     logger.warning(f"Failed to refresh signed URL: {e}")
             
@@ -1081,6 +1127,7 @@ async def list_questions(limit: int = 20, offset: int = 0, subject: Optional[str
                 mathpix_svg=question.get('mathpix_svg'),
                 uses_svg=question.get('uses_svg', False),
                 processing_status=question['processing_status'],
+                processing_error=question.get('processing_error'),
                 subject=question.get('subject'),
                 topics=question.get('topics', []),
                 created_at=question['created_at'],
@@ -1101,7 +1148,7 @@ async def search_questions(q: str, limit: int = 20, subject: Optional[str] = Non
     """Search questions using full-text search."""
     try:
         # For now, use mock user ID (in production, get from auth)
-        user_id = "mock-user-id"
+        user_id = "00000000-0000-0000-0000-000000000001"  # Mock UUID format for testing
         
         # Use the search function from the migration
         result = supabase.rpc('search_questions', {

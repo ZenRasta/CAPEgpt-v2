@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassButton } from '../components/GlassCard';
 import { useNavigate } from 'react-router-dom';
@@ -21,6 +21,9 @@ export default function UploadQA() {
   const [error, setError] = useState(null);
   const [aiAnalysis, setAiAnalysis] = useState(null);
   const navigate = useNavigate();
+  
+  const fileInputRef = useRef(null);
+  const answerFileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -98,7 +101,7 @@ export default function UploadQA() {
 
   const pollProcessingStatus = async (id) => {
     let attempts = 0;
-    const maxAttempts = 30; // 30 seconds max
+    const maxAttempts = 60; // 60 attempts = ~2 minutes with backoff
     
     return new Promise((resolve, reject) => {
       const checkStatus = async () => {
@@ -114,13 +117,20 @@ export default function UploadQA() {
             setProcessingStage('Processing completed! Getting AI analysis...');
             resolve(question);
           } else if (question.processing_status === 'failed') {
-            reject(new Error('Processing failed: ' + (question.processing_error || 'Unknown error')));
+            const errorMsg = question.processing_error || 'Unknown processing error occurred';
+            const userFriendlyMsg = errorMsg.includes('OCR services are not configured') 
+              ? 'Image processing is currently unavailable. Please type your question in the text area below instead.'
+              : `Processing failed: ${errorMsg}`;
+            reject(new Error(userFriendlyMsg));
           } else {
             attempts++;
             if (attempts >= maxAttempts) {
-              reject(new Error('Processing timeout'));
+              reject(new Error('Processing is taking longer than usual—please try again in a minute.'));
             } else {
-              setTimeout(checkStatus, 1000); // Check every second
+              // Backoff: start at 1s, increase gradually to max 4s
+              const delay = Math.min(1000 + attempts * 250, 4000);
+              setProcessingStage(`Processing... (${attempts}/${maxAttempts})`);
+              setTimeout(checkStatus, delay);
             }
           }
         } catch (err) {
@@ -145,7 +155,8 @@ export default function UploadQA() {
       const questionData = await questionResponse.json();
       
       if (!questionData.mathpix_markdown && !questionData.ocr_fallback_text) {
-        throw new Error('No text content available for analysis');
+        const errorDetail = questionData.processing_error ? ` (${questionData.processing_error})` : '';
+        throw new Error(`No text content available for analysis${errorDetail}`);
       }
       
       // Use the processed text for AI analysis
@@ -208,6 +219,25 @@ export default function UploadQA() {
       variants={containerVariants}
       className="py-8"
     >
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        name="file"
+        accept=".png,.jpg,.jpeg,.pdf"
+        onChange={handleFileSelect}
+        className="sr-only"
+        aria-label="Upload question file"
+      />
+      <input
+        ref={answerFileInputRef}
+        type="file"
+        name="answerFile"
+        accept=".png,.jpg,.jpeg,.pdf,.txt"
+        onChange={handleAnswerFileSelect}
+        className="sr-only"
+        aria-label="Upload answer file"
+      />
       {/* Hero Section */}
       <motion.section 
         className="container mx-auto px-4 mb-16"
@@ -271,17 +301,14 @@ export default function UploadQA() {
                 PNG, JPG, PDF • Max file size: 10MB
               </p>
               
-              <label className="cursor-pointer">
-                <GlassButton variant="secondary" className="font-bold tracking-wide">
-                  CHOOSE FILE 📂
-                </GlassButton>
-                <input
-                  type="file"
-                  accept=".png,.jpg,.jpeg,.pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-              </label>
+              <GlassButton 
+                variant="secondary" 
+                className="w-full flex items-center justify-center gap-3 font-bold tracking-wide"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={processing}
+              >
+                📂 CHOOSE FILE
+              </GlassButton>
               
               {selectedFile && (
                 <motion.div 
@@ -290,8 +317,8 @@ export default function UploadQA() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <p className="text-lime-slush font-bold text-sm">
-                    📸 {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}KB)
+                  <p className="text-lime-slush font-bold text-sm truncate">
+                    📸 {selectedFile.name.length > 30 ? `${selectedFile.name.substring(0, 30)}...` : selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)}KB)
                   </p>
                 </motion.div>
               )}
@@ -329,17 +356,14 @@ export default function UploadQA() {
 
               <div className="text-center">
                 <p className="text-white/80 mb-4 font-medium">OR</p>
-                <label className="cursor-pointer">
-                  <GlassButton variant="secondary" className="font-bold tracking-wide">
-                    UPLOAD ANSWER 📤
-                  </GlassButton>
-                  <input
-                    type="file"
-                    accept=".png,.jpg,.jpeg,.pdf,.txt"
-                    onChange={handleAnswerFileSelect}
-                    className="hidden"
-                  />
-                </label>
+                <GlassButton 
+                  variant="secondary" 
+                  className="font-bold tracking-wide"
+                  onClick={() => answerFileInputRef.current?.click()}
+                  disabled={processing}
+                >
+                  📤 UPLOAD ANSWER
+                </GlassButton>
                 
                 {answerFile && (
                   <motion.div 
@@ -348,8 +372,8 @@ export default function UploadQA() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <p className="text-bubblegum-pink font-bold text-sm">
-                      📤 {answerFile.name}
+                    <p className="text-bubblegum-pink font-bold text-sm truncate">
+                      📤 {answerFile.name.length > 30 ? `${answerFile.name.substring(0, 30)}...` : answerFile.name}
                     </p>
                   </motion.div>
                 )}

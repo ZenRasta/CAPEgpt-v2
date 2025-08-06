@@ -41,12 +41,14 @@ export const GlassButton = ({
   variant = 'primary', 
   className = '', 
   onClick,
+  type = 'button',
   ...props 
 }) => {
   const baseClass = `gen-button ${variant === 'primary' ? 'gen-button-primary' : 'gen-button-secondary'}`;
 
   return (
     <motion.button
+      type={type}
       className={`${baseClass} ${className}`}
       onClick={onClick}
       whileHover={{ scale: 1.05 }}
