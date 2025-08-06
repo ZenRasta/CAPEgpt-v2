@@ -13,16 +13,31 @@ export const AuthProvider = ({ children }) => {
   // Initial session fetch
   useEffect(() => {
     const bootstrap = async () => {
+      console.log('AuthProvider: Starting bootstrap...');
+      
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Set a timeout for Supabase request
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Supabase timeout')), 3000)
+        );
+        
+        const supabasePromise = supabase.auth.getSession();
+        
+        const { data: { session } } = await Promise.race([supabasePromise, timeoutPromise]);
+        console.log('AuthProvider: Supabase session:', session);
+        
         const guest = localStorage.getItem('cape_session') === 'guest';
+        console.log('AuthProvider: Guest session:', guest);
+        
         setSession(session ?? (guest ? 'guest' : null));
       } catch (error) {
-        console.error('Error getting session:', error);
-        // Check for guest session even if Supabase fails
+        console.error('AuthProvider: Error getting session:', error);
+        // Always check for guest session if Supabase fails
         const guest = localStorage.getItem('cape_session') === 'guest';
+        console.log('AuthProvider: Fallback to guest session:', guest);
         setSession(guest ? 'guest' : null);
       } finally {
+        console.log('AuthProvider: Bootstrap complete, setting loading to false');
         setLoading(false);
       }
     };
@@ -32,34 +47,52 @@ export const AuthProvider = ({ children }) => {
 
   // Live auth state listener
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, sess) => {
-        console.log('Auth state change:', event, sess);
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          setSession(sess);
-        }
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          localStorage.removeItem('cape_session');
-        }
-        setLoading(false);
-      }
-    );
+    let subscription;
     
-    return () => subscription.unsubscribe();
+    try {
+      const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(
+        (event, sess) => {
+          console.log('AuthProvider: Auth state change:', event, sess);
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            setSession(sess);
+            setLoading(false);
+          }
+          if (event === 'SIGNED_OUT') {
+            setSession(null);
+            localStorage.removeItem('cape_session');
+            setLoading(false);
+          }
+        }
+      );
+      subscription = sub;
+    } catch (error) {
+      console.error('AuthProvider: Error setting up auth listener:', error);
+      // Continue without auth listener - app will still work with guest mode
+    }
+    
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
-  // Auto-redirect once authenticated
+  // Auto-redirect once authenticated (for OAuth flow)
   useEffect(() => {
-    if (!loading && session && location.pathname === '/login') {
+    console.log('Auto-redirect check:', { loading, session, pathname: location.pathname });
+    if (!loading && session && session !== 'guest' && location.pathname === '/login') {
+      console.log('Auto-redirecting to home after OAuth...');
       navigate('/', { replace: true });
     }
   }, [loading, session, location.pathname, navigate]);
 
   // Helpers
   const loginGuest = () => {
+    console.log('Guest login clicked');
     localStorage.setItem('cape_session', 'guest');
     setSession('guest');
+    setLoading(false); // Ensure loading is false for guest
+    console.log('Navigating to home...');
     navigate('/', { replace: true });
   };
 
