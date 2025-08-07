@@ -170,6 +170,11 @@ export default function UploadQA() {
               .replace(/"/g, '\\"')
               .replace(/'/g, "\\'");
             errorMessage = errorMessage + ' (' + safeError + ')';
+            
+            // Add helpful hint for OCR configuration issues
+            if (safeError.includes('credentials') || safeError.includes('not configured')) {
+              errorMessage += '\n\nTip: Check that OCR services are properly configured with valid API keys.';
+            }
           } catch (e) {
             // If there's still an error, just use the base message
             errorMessage = errorMessage + ' (Error details unavailable)';

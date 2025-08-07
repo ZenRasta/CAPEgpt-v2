@@ -70,7 +70,13 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` with your credentials:
+#### Environment File Locations
+
+The system automatically loads `.env` files in this order:
+1. `backend/.env` (primary location)
+2. `backups/.env` (fallback location)
+
+Edit your `.env` file with these credentials:
 
 ```env
 # Required
@@ -78,11 +84,25 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_anon_key
 OPENROUTER_API_KEY=your_openrouter_api_key
 
-# Optional (for better OCR)
+# OCR Services (at least one required for image processing)
 MATHPIX_APP_ID=your_mathpix_app_id
 MATHPIX_APP_KEY=your_mathpix_app_key
 GOOGLE_APPLICATION_CREDENTIALS=path/to/google-credentials.json
 ```
+
+#### OCR Service Setup
+
+**Mathpix (Recommended for Math)**
+1. Sign up at [mathpix.com](https://mathpix.com/)
+2. Get your App ID and App Key from the dashboard
+3. Add to `.env` file
+
+**Google Vision (PDF Support + Fallback)**
+1. Create a Google Cloud project
+2. Enable the Vision API
+3. Create service account credentials
+4. Download JSON credentials file
+5. Set path in `GOOGLE_APPLICATION_CREDENTIALS`
 
 ### 4. Frontend Setup
 
@@ -114,6 +134,24 @@ python main.py
 
 The backend will run on `http://127.0.0.1:8000`
 
+#### Check OCR Services
+
+```bash
+# Check OCR health status
+curl http://localhost:8000/health/ocr
+```
+
+Expected response:
+```json
+{
+  "ok": true,
+  "provider_status": {
+    "mathpix": {"available": true, "app_id_set": true, "app_key_set": true},
+    "google_vision": {"available": true, "credentials_set": true}
+  }
+}
+```
+
 #### Start Frontend (Terminal 2)
 
 ```bash
@@ -128,10 +166,14 @@ The frontend will run on `http://localhost:5173`
 ### Backend API
 
 - `GET /` - Health check
+- `GET /health/ocr` - OCR services health status
 - `POST /upload` - Upload image and extract text via OCR
+- `POST /questions/upload` - Upload question file for processing
+- `GET /questions/{id}` - Get processed question by ID
 - `POST /query` - Process question and get AI solution
 - `GET /stats/topic` - Get topic statistics
 - `GET /subjects` - Get available subjects
+- `GET /popular-questions` - Get trending questions
 
 ### Example Usage
 
@@ -192,9 +234,17 @@ See `supabase_db.sql` for the complete schema.
 2. Update the `valid_subjects` list in `backend/main.py`
 3. Add corresponding data to your database
 
-### Customizing OCR
+### OCR Processing Flow
 
-The system automatically chooses between Google Vision and Mathpix based on mathematical content detection. You can modify the `is_math_heavy()` function in `backend/main.py` to adjust this logic.
+The system uses a **Mathpix-first strategy**:
+
+1. **Mathpix** attempts OCR first (better for mathematical content)
+2. **Google Vision** fallback if Mathpix fails or is not configured
+3. **PDF Support**: Automatically converts PDF pages to images for Vision API
+
+File support:
+- **Images**: PNG, JPG, JPEG (up to 25MB)
+- **PDFs**: Converted to images automatically (first 2 pages)
 
 ### Styling
 
@@ -216,6 +266,37 @@ The frontend uses Tailwind CSS for styling. Modify `frontend/src/index.css` for 
 ### Database
 
 Supabase handles the database hosting. Ensure your production environment variables point to your Supabase project.
+
+## Troubleshooting
+
+### OCR Issues
+
+1. **Check service status**:
+   ```bash
+   curl http://localhost:8000/health/ocr
+   ```
+
+2. **Common problems**:
+   - **Mathpix not working**: Verify `MATHPIX_APP_ID` and `MATHPIX_APP_KEY` are correct
+   - **Google Vision errors**: Check `GOOGLE_APPLICATION_CREDENTIALS` path is valid and accessible
+   - **PDF processing fails**: Ensure PyMuPDF is installed (`pip install PyMuPDF`)
+
+3. **Environment loading**:
+   - Check startup logs for: `"Environment loaded from: /path/to/.env"`
+   - System tries `backend/.env` first, then `backups/.env`
+
+### Upload Issues
+
+- **File too large**: Maximum 25MB for uploads
+- **Unsupported format**: Only PNG, JPG, PDF are supported  
+- **Processing timeout**: Large files may take 1-2 minutes to process
+- **No text extracted**: Try a clearer image or check OCR service status
+
+### Frontend Errors
+
+- **CORS errors**: Ensure backend URL is correct in `VITE_API_URL`
+- **Network errors**: Check that backend is running on the correct port
+- **OCR configuration hints**: The UI shows helpful tips for common OCR setup issues
 
 ## Contributing
 
