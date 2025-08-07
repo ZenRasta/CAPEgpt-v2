@@ -1,9 +1,10 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from dotenv import load_dotenv
 import os
 import io
+from pathlib import Path
+from dotenv import load_dotenv
 from google.cloud import vision
 import requests
 from openai import OpenAI
@@ -18,12 +19,26 @@ import hashlib
 import base64
 import uuid
 from datetime import datetime, timedelta
+import mimetypes
+import fitz  # PyMuPDF
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+# Try backend/.env first; if absent, fall back to /backups/.env
+here = Path(__file__).parent
+env_file = here / ".env"
+loaded = load_dotenv(env_file)
+if not loaded and (here.parent / "backups" / ".env").exists():
+    env_file = here.parent / "backups" / ".env"
+    loaded = load_dotenv(env_file)
+
+# Log which env file was loaded
+if loaded:
+    logger.info(f"Environment loaded from: {env_file}")
+else:
+    logger.warning("No .env file found in backend/ or backups/")
 
 # Environment variables
 SUPABASE_URL = os.getenv('SUPABASE_URL')
@@ -48,11 +63,16 @@ try:
     openai_client = OpenAI(base_url='https://openrouter.ai/api/v1', api_key=OPENROUTER_API_KEY)
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
     logger.info("Successfully initialized all clients")
-    # Debug: Check if API keys are loaded
-    logger.info(f"MATHPIX_APP_ID loaded: {'Yes' if MATHPIX_APP_ID else 'No'}")
-    logger.info(f"MATHPIX_APP_KEY loaded: {'Yes' if MATHPIX_APP_KEY else 'No'}")
-    logger.info(f"GOOGLE_CREDENTIALS path: {GOOGLE_CREDENTIALS}")
-    logger.info(f"OPENROUTER_API_KEY loaded: {'Yes' if OPENROUTER_API_KEY else 'No'}")
+    
+    # Log API key availability (masked for security)
+    mathpix_id_masked = f"{MATHPIX_APP_ID[:8]}***" if MATHPIX_APP_ID else "Not set"
+    mathpix_key_masked = f"{MATHPIX_APP_KEY[:8]}***" if MATHPIX_APP_KEY else "Not set"
+    openrouter_masked = f"{OPENROUTER_API_KEY[:8]}***" if OPENROUTER_API_KEY else "Not set"
+    
+    logger.info(f"MATHPIX_APP_ID: {mathpix_id_masked}")
+    logger.info(f"MATHPIX_APP_KEY: {mathpix_key_masked}")
+    logger.info(f"GOOGLE_CREDENTIALS: {'Set' if GOOGLE_CREDENTIALS else 'Not set'} ({GOOGLE_CREDENTIALS})")
+    logger.info(f"OPENROUTER_API_KEY: {openrouter_masked}")
 except Exception as e:
     logger.error(f"Failed to initialize clients: {e}")
     raise
@@ -80,29 +100,46 @@ def embed_text(text: str) -> List[float]:
         logger.error(f"Error generating embeddings: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate embeddings")
 
-def is_math_heavy(image_bytes: bytes) -> bool:
-    """Determine if image contains heavy mathematical content."""
+def is_math_content(filename: str) -> bool:
+    """Simple heuristic to detect if content is likely mathematical based on filename."""
+    math_keywords = ['math', 'equation', 'calculus', 'algebra', 'geometry', 'formula', 'problem']
+    filename_lower = filename.lower()
+    
+    # Check for math-related keywords in filename
+    for keyword in math_keywords:
+        if keyword in filename_lower:
+            return True
+    
+    # Default to True to prefer MathPix for uploads (it's better at OCR than Vision anyway)
+    return True
+
+def detect_mime_type(filename: str) -> str:
+    """Detect MIME type from filename."""
+    if filename.lower().endswith('.pdf'):
+        return 'application/pdf'
+    elif filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+        # Use mimetypes for accurate detection
+        mime_type, _ = mimetypes.guess_type(filename)
+        return mime_type or 'image/jpeg'
+    else:
+        return 'image/jpeg'  # fallback
+
+def pdf_to_images(pdf_bytes: bytes, max_pages: int = 2, dpi: int = 200) -> List[bytes]:
+    """Convert PDF pages to PNG images using PyMuPDF."""
     try:
-        client = vision.ImageAnnotatorClient()
-        image = vision.Image(content=image_bytes)
-        response = client.text_detection(image=image)
-        
-        if not response.text_annotations:
-            return False
-            
-        text = response.text_annotations[0].description
-        
-        # Count mathematical symbols and patterns
-        math_symbols = len(re.findall(r'[+\-*/=^()∫∑√π∞≤≥≠±∂∇]', text))
-        fraction_patterns = len(re.findall(r'\d+/\d+', text))
-        equation_patterns = len(re.findall(r'[a-zA-Z]\s*=\s*[^a-zA-Z\s]', text))
-        
-        # Consider it math-heavy if it has multiple indicators
-        return (math_symbols >= 5) or (fraction_patterns >= 2) or (equation_patterns >= 1)
-        
+        images = []
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            for page_num, page in enumerate(doc[:max_pages]):
+                # Render page to pixmap with specified DPI
+                pix = page.get_pixmap(dpi=dpi)
+                # Convert to PNG bytes
+                png_bytes = pix.tobytes("png")
+                images.append(png_bytes)
+                logger.info(f"Converted PDF page {page_num + 1} to PNG ({len(png_bytes)} bytes)")
+        return images
     except Exception as e:
-        logger.warning(f"Error in math detection, defaulting to non-math: {e}")
-        return False
+        logger.error(f"PDF to image conversion failed: {e}")
+        raise
 
 class MathpixResult:
     """Data class for Mathpix processing results."""
@@ -120,10 +157,13 @@ def process_with_mathpix(image_bytes: bytes, filename: str) -> MathpixResult:
         if not (MATHPIX_APP_ID and MATHPIX_APP_KEY):
             return MathpixResult(error="Mathpix credentials not configured")
         
+        # Detect proper MIME type
+        mime_type = detect_mime_type(filename)
+        
         # First, get Markdown output
         markdown_response = requests.post(
             'https://api.mathpix.com/v3/text',
-            files={'file': (filename, image_bytes, 'image/jpeg')},
+            files={'file': (filename, image_bytes, mime_type)},
             headers={
                 'app_id': MATHPIX_APP_ID,
                 'app_key': MATHPIX_APP_KEY
@@ -205,7 +245,7 @@ def should_use_svg(markdown: str, confidence: float, svg: str) -> bool:
     
     # Use SVG if markdown contains many fallback images or unknown symbols
     fallback_indicators = [
-        r'\includegraphics',  # LaTeX image includes
+        r'\\includegraphics',  # LaTeX image includes
         r'!\[.*?\]\(',       # Markdown images
         r'<img',             # HTML images
         r'\?{3,}',           # Multiple question marks (OCR uncertainty)
@@ -228,14 +268,16 @@ def should_use_svg(markdown: str, confidence: float, svg: str) -> bool:
     # Default to Markdown/KaTeX for better performance
     return False
 
-def ocr_image(image_bytes: bytes, is_math: bool) -> str:
-    """Extract text from image using appropriate OCR service."""
-    try:
-        if is_math and MATHPIX_APP_ID and MATHPIX_APP_KEY:
-            # Use Mathpix for math-heavy content
+def ocr_image(file_bytes: bytes, filename: str) -> str:
+    """Extract text from file using OCR. Try Mathpix first, then Google Vision."""
+    mime_type = detect_mime_type(filename)
+    
+    # Always try Mathpix first (it's better at OCR)
+    if MATHPIX_APP_ID and MATHPIX_APP_KEY:
+        try:
             response = requests.post(
                 'https://api.mathpix.com/v3/text',
-                files={'file': ('image.jpg', image_bytes, 'image/jpeg')},
+                files={'file': (filename, file_bytes, mime_type)},
                 headers={
                     'app_id': MATHPIX_APP_ID,
                     'app_key': MATHPIX_APP_KEY
@@ -244,7 +286,9 @@ def ocr_image(image_bytes: bytes, is_math: bool) -> str:
                     'options_json': json.dumps({
                         'math_inline_delimiters': ['$', '$'],
                         'math_display_delimiters': ['$$', '$$'],
-                        'rm_spaces': True
+                        'rm_spaces': True,
+                        'include_asciimath': True,
+                        'include_latex': True
                     })
                 },
                 timeout=30
@@ -252,23 +296,57 @@ def ocr_image(image_bytes: bytes, is_math: bool) -> str:
             
             if response.ok:
                 result = response.json()
-                return result.get('text', '')
+                text = result.get('text', '').strip()
+                if text:  # Return if we got meaningful text
+                    logger.info(f"Mathpix OCR successful for {filename}")
+                    return text
+                else:
+                    logger.warning("Mathpix returned empty text, falling back to Vision")
             else:
-                logger.warning(f"Mathpix failed: {response.status_code}, falling back to Google Vision")
-        
-        # Use Google Vision as fallback or for non-math content
-        client = vision.ImageAnnotatorClient()
-        image = vision.Image(content=image_bytes)
-        response = client.text_detection(image=image)
-        
-        if response.text_annotations:
-            return response.text_annotations[0].description
-        else:
-            return ""
+                logger.warning(f"Mathpix failed: {response.status_code}, falling back to Vision")
+        except Exception as e:
+            logger.warning(f"Mathpix error: {e}, falling back to Vision")
+    
+    # Fallback to Google Vision
+    try:
+        if mime_type == 'application/pdf':
+            # Convert PDF pages to images and OCR each
+            images = pdf_to_images(file_bytes, max_pages=2)
+            all_text = []
             
+            client = vision.ImageAnnotatorClient()
+            for i, image_bytes in enumerate(images):
+                image = vision.Image(content=image_bytes)
+                # Use document_text_detection for better text extraction
+                response = client.document_text_detection(image=image)
+                
+                if response.full_text_annotation:
+                    page_text = response.full_text_annotation.text.strip()
+                    if page_text:
+                        all_text.append(f"Page {i+1}:\n{page_text}")
+                        
+            return "\n\n".join(all_text) if all_text else ""
+        else:
+            # Regular image OCR
+            client = vision.ImageAnnotatorClient()
+            image = vision.Image(content=file_bytes)
+            
+            # Use document_text_detection for denser text, text_detection for simpler cases
+            response = client.document_text_detection(image=image)
+            
+            if response.full_text_annotation:
+                return response.full_text_annotation.text.strip()
+            else:
+                # Fallback to basic text detection
+                response = client.text_detection(image=image)
+                if response.text_annotations:
+                    return response.text_annotations[0].description.strip()
+                else:
+                    return ""
+                    
     except Exception as e:
-        logger.error(f"OCR failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to extract text from image")
+        logger.error(f"Vision OCR failed: {e}")
+        raise HTTPException(status_code=500, detail=f"OCR failed: {str(e)}")
 
 def vector_search(table: str, embedding: List[float], subject: str, limit: int = 8, threshold: float = 0.7) -> List[Dict[str, Any]]:
     """Enhanced vector similarity search with hybrid retrieval."""
@@ -620,8 +698,7 @@ async def process_question_async(question_id: str, file_bytes: bytes, filename: 
         if mathpix_result.error:
             # Try Google Vision as fallback
             try:
-                is_math = is_math_heavy(file_bytes)
-                fallback_text = ocr_image(file_bytes, is_math)
+                fallback_text = ocr_image(file_bytes, filename)
                 
                 # Update with fallback results
                 supabase.table('questions').update({
@@ -670,6 +747,57 @@ async def root():
     """Health check endpoint."""
     return {"message": "CAPE GPT API is running", "version": "1.0.0"}
 
+@app.get("/health/ocr")
+async def health_ocr():
+    """OCR health check endpoint."""
+    try:
+        # Check provider availability
+        mathpix_ready = bool(MATHPIX_APP_ID and MATHPIX_APP_KEY)
+        
+        # Check Google Vision by testing credentials
+        vision_ready = False
+        if GOOGLE_CREDENTIALS:
+            try:
+                # Try to initialize client to verify credentials
+                vision.ImageAnnotatorClient()
+                vision_ready = True
+            except Exception as e:
+                logger.warning(f"Vision client initialization failed: {e}")
+        
+        provider_status = {
+            "mathpix": {
+                "available": mathpix_ready,
+                "app_id_set": bool(MATHPIX_APP_ID),
+                "app_key_set": bool(MATHPIX_APP_KEY)
+            },
+            "google_vision": {
+                "available": vision_ready,
+                "credentials_set": bool(GOOGLE_CREDENTIALS),
+                "credentials_path": GOOGLE_CREDENTIALS if GOOGLE_CREDENTIALS else None
+            }
+        }
+        
+        # Overall health check
+        any_provider_ready = mathpix_ready or vision_ready
+        
+        return {
+            "ok": any_provider_ready,
+            "provider_status": provider_status,
+            "message": "At least one OCR provider is ready" if any_provider_ready else "No OCR providers are configured",
+            "recommendations": {
+                "mathpix": "Configure MATHPIX_APP_ID and MATHPIX_APP_KEY for best math OCR" if not mathpix_ready else "Ready",
+                "google_vision": "Configure GOOGLE_APPLICATION_CREDENTIALS for image/PDF OCR" if not vision_ready else "Ready"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"OCR health check failed: {e}")
+        return {
+            "ok": False,
+            "error": str(e),
+            "message": "OCR health check failed"
+        }
+
 @app.post('/upload')
 async def upload_image(file: UploadFile = File(...)):
     """Upload and process image to extract text."""
@@ -685,9 +813,8 @@ async def upload_image(file: UploadFile = File(...)):
         if len(image_bytes) > 10 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Image too large (max 10MB)")
         
-        # Determine if math-heavy and extract text
-        is_math = is_math_heavy(image_bytes)
-        text = ocr_image(image_bytes, is_math)
+        # Extract text using OCR
+        text = ocr_image(image_bytes, file.filename)
         
         if not text.strip():
             raise HTTPException(status_code=400, detail="No text could be extracted from the image")
@@ -697,7 +824,7 @@ async def upload_image(file: UploadFile = File(...)):
         
         return {
             'text': text,
-            'is_math_heavy': is_math,
+            'is_math_heavy': is_math_content(file.filename),
             'image_hash': image_hash
         }
         

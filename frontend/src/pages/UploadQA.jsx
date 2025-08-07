@@ -152,11 +152,30 @@ export default function UploadQA() {
         throw new Error('Failed to get question details');
       }
       
-      const questionData = await questionResponse.json();
+      let questionData;
+      try {
+        questionData = await questionResponse.json();
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        throw new Error('Invalid response format from server. Please try again.');
+      }
       
       if (!questionData.mathpix_markdown && !questionData.ocr_fallback_text) {
-        const errorDetail = questionData.processing_error ? ` (${questionData.processing_error})` : '';
-        throw new Error(`No text content available for analysis${errorDetail}`);
+        let errorMessage = 'No text content available for analysis';
+        if (questionData.processing_error) {
+          try {
+            // Safely handle error messages that might contain escape sequences
+            const safeError = String(questionData.processing_error)
+              .replace(/\\/g, '\\\\')
+              .replace(/"/g, '\\"')
+              .replace(/'/g, "\\'");
+            errorMessage = errorMessage + ' (' + safeError + ')';
+          } catch (e) {
+            // If there's still an error, just use the base message
+            errorMessage = errorMessage + ' (Error details unavailable)';
+          }
+        }
+        throw new Error(errorMessage);
       }
       
       // Use the processed text for AI analysis
@@ -169,8 +188,8 @@ export default function UploadQA() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text: queryText,
-          subject: subject,
+          text: String(queryText || '').replace(/\\/g, '\\\\'),
+          subject: String(subject || 'Pure Mathematics'),
         }),
       });
 
@@ -178,14 +197,33 @@ export default function UploadQA() {
         throw new Error(`Analysis failed: ${analysisResponse.status}`);
       }
 
-      const analysisResult = await analysisResponse.json();
+      let analysisResult;
+      try {
+        analysisResult = await analysisResponse.json();
+      } catch (jsonError) {
+        console.error('Analysis response JSON parsing error:', jsonError);
+        throw new Error('Invalid analysis response format from server. Please try again.');
+      }
       setAiAnalysis(analysisResult);
       setProcessingStage('Complete! 🎉');
       setProcessing(false);
 
     } catch (err) {
       console.error('AI analysis error:', err);
-      setError(err.message || 'Failed to get AI analysis');
+      // Safely handle error messages that might contain invalid escape sequences
+      let errorMessage = 'Failed to get AI analysis';
+      if (err && err.message) {
+        try {
+          errorMessage = String(err.message)
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/'/g, "\\'");
+        } catch (e) {
+          console.error('Error processing error message:', e);
+          errorMessage = 'Failed to get AI analysis (Error details unavailable)';
+        }
+      }
+      setError(errorMessage);
       setProcessing(false);
     }
   };
