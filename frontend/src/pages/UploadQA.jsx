@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { escapeRegex } from '../util/regex';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -184,7 +185,18 @@ export default function UploadQA() {
       }
       
       // Use the processed text for AI analysis
-      const queryText = questionData.mathpix_markdown || questionData.ocr_fallback_text;
+      const rawOCRText = questionData.mathpix_markdown || questionData.ocr_fallback_text;
+      
+      // Validate OCR text before processing
+      if (!rawOCRText || rawOCRText.trim().length < 3) {
+        throw new Error("No OCR text received – cannot analyse.");
+      }
+      
+      // Note: If we ever need to use OCR text in regex patterns, we should escape it:
+      // const safePattern = escapeRegex(rawOCRText);
+      // const latexRegex = new RegExp(safePattern, "i");
+      
+      const queryText = rawOCRText;
       const subject = questionData.subject || 'Pure Mathematics';
       
       const analysisResponse = await fetch(`${API_BASE_URL}/query`, {
@@ -215,19 +227,27 @@ export default function UploadQA() {
 
     } catch (err) {
       console.error('AI analysis error:', err);
-      // Safely handle error messages that might contain invalid escape sequences
+      
+      // Handle different types of errors appropriately
       let errorMessage = 'Failed to get AI analysis';
+      
       if (err && err.message) {
-        try {
-          errorMessage = String(err.message)
-            .replace(/\\/g, '\\\\')
-            .replace(/"/g, '\\"')
-            .replace(/'/g, "\\'");
-        } catch (e) {
-          console.error('Error processing error message:', e);
-          errorMessage = 'Failed to get AI analysis (Error details unavailable)';
+        if (/bad escape/.test(err.message)) {
+          console.error("Regex construction failed – LaTeX needs escaping", err);
+          errorMessage = "Internal parsing glitch – working on a fix. Please try a different question for now.";
+        } else {
+          try {
+            errorMessage = String(err.message)
+              .replace(/\\/g, '\\\\')
+              .replace(/"/g, '\\"')
+              .replace(/'/g, "\\'");
+          } catch (e) {
+            console.error('Error processing error message:', e);
+            errorMessage = 'Failed to get AI analysis (Error details unavailable)';
+          }
         }
       }
+      
       setError(errorMessage);
       setProcessing(false);
     }

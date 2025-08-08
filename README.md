@@ -246,6 +246,24 @@ File support:
 - **Images**: PNG, JPG, JPEG (up to 25MB)
 - **PDFs**: Converted to images automatically (first 2 pages)
 
+### Handling LaTeX OCR – Why We Escape
+
+When processing mathematical content through OCR, the extracted text often contains LaTeX symbols and commands like `\int`, `\sum`, `\frac{}{}`, etc. These symbols have special meaning in regular expressions and can cause parsing errors if used directly in regex patterns.
+
+**The Problem**: Raw OCR text like `\int_0^\infty x dx` contains backslashes that are invalid regex escape sequences.
+
+**The Solution**: The system includes a `escapeRegex()` utility that safely escapes special regex characters:
+
+```javascript
+import { escapeRegex } from '../util/regex';
+
+// Safe regex construction from OCR text
+const safePattern = escapeRegex(rawOCRText);
+const latexRegex = new RegExp(safePattern, "i");
+```
+
+**Error Handling**: If regex construction fails, the system shows user-friendly error messages instead of crashing.
+
 ### Styling
 
 The frontend uses Tailwind CSS for styling. Modify `frontend/src/index.css` for custom styles.
