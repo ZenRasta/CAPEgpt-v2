@@ -258,12 +258,14 @@ def should_use_svg(markdown: str, confidence: float, svg: str) -> bool:
     
     # Use SVG if content appears to be heavily diagrammatic
     diagram_indicators = ['diagram', 'figure', 'chart', 'graph', 'table']
-    if any(indicator in markdown.lower() for indicator in diagram_indicators):
+    markdown_lower = markdown.lower()
+    if any(re.search(r'\b' + re.escape(indicator) + r'\b', markdown_lower)
+           for indicator in diagram_indicators):
         return True and bool(svg)
     
     # Use SVG if the content is very short (likely a single equation/diagram)
     if len(markdown.strip()) < 50 and svg:
-        return True
+        return confidence < 0.85
     
     # Default to Markdown/KaTeX for better performance
     return False
@@ -644,12 +646,16 @@ def classify_question(content: str, filename: str) -> dict:
     
     # Subject detection
     subject = "Pure Mathematics"  # Default
-    if any(term in content_lower for term in ['physics', 'force', 'velocity', 'acceleration']):
-        subject = "Physics"
-    elif any(term in content_lower for term in ['chemistry', 'molecule', 'reaction', 'element']):
-        subject = "Chemistry"
-    elif any(term in content_lower for term in ['applied', 'statistics', 'probability']):
-        subject = "Applied Mathematics"
+    subject_keywords = {
+        "Physics": ['physics', 'force', 'velocity', 'acceleration'],
+        "Chemistry": ['chemistry', 'molecule', 'reaction', 'element'],
+        "Applied Mathematics": ['applied', 'statistics', 'probability'],
+    }
+    for subj, keywords in subject_keywords.items():
+        if any(re.search(r'\b' + re.escape(term) + r'\b', content_lower)
+               for term in keywords):
+            subject = subj
+            break
     
     # Year detection from filename
     year_match = re.search(r'20\d{2}', filename_lower)
@@ -657,7 +663,8 @@ def classify_question(content: str, filename: str) -> dict:
     
     # Question type detection
     question_type = "short_answer"  # Default
-    if any(term in content_lower for term in ['a)', 'b)', 'c)', 'd)', 'multiple choice']):
+    mc_indicators = ['a)', 'b)', 'c)', 'd)', 'multiple choice']
+    if any(re.search(re.escape(term), content_lower) for term in mc_indicators):
         question_type = "multiple_choice"
     elif len(content) > 500:
         question_type = "essay"
@@ -673,7 +680,8 @@ def classify_question(content: str, filename: str) -> dict:
     }
     
     for topic, keywords in topic_keywords.items():
-        if any(keyword in content_lower for keyword in keywords):
+        if any(re.search(r'\b' + re.escape(keyword) + r'\b', content_lower)
+               for keyword in keywords):
             topics.append(topic)
     
     return {
