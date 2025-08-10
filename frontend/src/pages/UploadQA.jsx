@@ -7,6 +7,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { escapeRegex } from '../util/regex';
+import { sanitizeAIError } from './uploadQaError.js';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -227,27 +228,8 @@ export default function UploadQA() {
 
     } catch (err) {
       console.error('AI analysis error:', err);
-      
-      // Handle different types of errors appropriately
-      let errorMessage = 'Failed to get AI analysis';
-      
-      if (err && err.message) {
-        if (/bad escape/.test(err.message)) {
-          console.error("Regex construction failed – LaTeX needs escaping", err);
-          errorMessage = "Internal parsing glitch – working on a fix. Please try a different question for now.";
-        } else {
-          try {
-            errorMessage = String(err.message)
-              .replace(/\\/g, '\\\\')
-              .replace(/"/g, '\\"')
-              .replace(/'/g, "\\'");
-          } catch (e) {
-            console.error('Error processing error message:', e);
-            errorMessage = 'Failed to get AI analysis (Error details unavailable)';
-          }
-        }
-      }
-      
+      const errorMessage = sanitizeAIError(err);
+      console.error('Sanitized AI analysis error:', errorMessage);
       setError(errorMessage);
       setProcessing(false);
     }

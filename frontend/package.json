@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node src/util/regex.test.js"
+    "test": "node src/util/regex.test.js && node src/pages/UploadQA.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",
