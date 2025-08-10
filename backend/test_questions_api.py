@@ -4,11 +4,16 @@ Unit tests for the questions API endpoints.
 import pytest
 import tempfile
 import os
+import re
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, MagicMock
 import importlib
 import sys
 import os
+
+# Provide required environment variables for importing main
+os.environ.setdefault("SUPABASE_URL", "http://localhost")
+os.environ.setdefault("SUPABASE_KEY", "test-key")
 
 # Mock SentenceTransformer to avoid network calls during tests
 with patch('sentence_transformers.SentenceTransformer') as MockST:
@@ -229,6 +234,17 @@ class TestMathpixProcessing:
         result = should_use_svg(markdown, 0.8, svg)
         assert result is True
 
+    def test_should_use_svg_infty(self):
+        """Ensure limit notation with \\infty doesn't raise regex errors."""
+        markdown = r"Consider \lim_{x \\to \\infty} f(x)"
+        svg = "<svg>test</svg>"
+
+        try:
+            result = should_use_svg(markdown, 0.8, svg)
+        except re.error as e:
+            pytest.fail(f"Regex error: {e}")
+        assert result is True
+
 class TestQuestionClassification:
     """Test question classification functions."""
     
@@ -279,6 +295,18 @@ class TestQuestionClassification:
         filename = "Pure_Math_2023_Unit1_Paper2.pdf"
 
         result = classify_question(content, filename)
+
+        assert result['subject'] == 'Pure Mathematics'
+
+    def test_classify_question_with_infty(self):
+        """Ensure classification handles expressions with \\infty."""
+        content = r"Find the limit as x \\to \\infty of \frac{1}{x}"
+        filename = "Pure_Math_2023_Unit1_Paper2.pdf"
+
+        try:
+            result = classify_question(content, filename)
+        except re.error as e:
+            pytest.fail(f"Regex error: {e}")
 
         assert result['subject'] == 'Pure Mathematics'
 
