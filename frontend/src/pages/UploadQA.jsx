@@ -163,26 +163,35 @@ export default function UploadQA() {
       }
       
       if (!questionData.mathpix_markdown && !questionData.ocr_fallback_text) {
+        // Use a safe error message construction approach
         let errorMessage = 'No text content available for analysis';
         if (questionData.processing_error) {
           try {
-            // Safely handle error messages that might contain escape sequences
-            const safeError = String(questionData.processing_error)
-              .replace(/\\/g, '\\\\')
-              .replace(/"/g, '\\"')
-              .replace(/'/g, "\\'");
-            errorMessage = errorMessage + ' (' + safeError + ')';
+            // Safely handle error messages that might contain invalid escape sequences
+            const rawError = String(questionData.processing_error);
+            // Use Array.from to convert to character array and rebuild safely
+            const safeChars = Array.from(rawError).map(char => 
+              char === '\\' ? '\\\\' : char
+            ).join('');
+            errorMessage = errorMessage + ' (' + safeChars + ')';
             
-            // Add helpful hint for OCR configuration issues
-            if (safeError.includes('credentials') || safeError.includes('not configured')) {
+            // Add helpful hint for OCR configuration issues  
+            if (rawError.includes('credentials') || rawError.includes('not configured')) {
               errorMessage += '\n\nTip: Check that OCR services are properly configured with valid API keys.';
             }
           } catch (e) {
             // If there's still an error, just use the base message
-            errorMessage = errorMessage + ' (Error details unavailable)';
+            errorMessage = 'No text content available for analysis (Error details unavailable)';
           }
         }
-        throw new Error(errorMessage);
+        
+        // Ensure the final error message doesn't contain problematic escape sequences
+        try {
+          throw new Error(errorMessage);
+        } catch (constructError) {
+          // If even the error construction fails, use a completely safe message
+          throw new Error('No text content available for analysis');
+        }
       }
       
       // Use the processed text for AI analysis
@@ -206,7 +215,7 @@ export default function UploadQA() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text: String(queryText || '').replace(/\\/g, '\\\\'),
+          text: escapeRegex(String(queryText || '')),
           subject: String(subject || 'Pure Mathematics'),
         }),
       });

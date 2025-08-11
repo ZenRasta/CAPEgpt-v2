@@ -214,9 +214,13 @@ def process_with_mathpix(image_bytes: bytes, filename: str) -> MathpixResult:
                 # Extract SVG content if present in HTML
                 if '<svg' in svg_text and '</svg>' in svg_text:
                     import re
-                    svg_match = re.search(r'<svg[^>]*>.*?</svg>', svg_text, re.DOTALL)
-                    if svg_match:
-                        svg_text = svg_match.group(0)
+                    try:
+                        svg_match = re.search(r'<svg[^>]*>.*?</svg>', svg_text, re.DOTALL)
+                        if svg_match:
+                            svg_text = svg_match.group(0)
+                    except re.error as e:
+                        logger.warning(f"SVG regex extraction failed: {e}")
+                        svg_text = ""
                 else:
                     svg_text = ""
         except Exception as e:
@@ -235,6 +239,8 @@ def process_with_mathpix(image_bytes: bytes, filename: str) -> MathpixResult:
         
     except Exception as e:
         logger.error(f"Mathpix processing failed: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return MathpixResult(error=str(e))
 
 def should_use_svg(markdown: str, confidence: float, svg: str) -> bool:
@@ -252,16 +258,29 @@ def should_use_svg(markdown: str, confidence: float, svg: str) -> bool:
         r'\_\_+',            # Multiple underscores (likely diagram/table)
     ]
     
-    fallback_count = sum(len(re.findall(pattern, markdown)) for pattern in fallback_indicators)
+    fallback_count = 0
+    try:
+        fallback_count = sum(len(re.findall(pattern, markdown)) for pattern in fallback_indicators)
+    except re.error as e:
+        logger.warning(f"Regex error in fallback_indicators matching: {e}. Using safe fallback.")
+        # If regex fails due to invalid escape sequences, assume no fallback indicators
+        fallback_count = 0
     if fallback_count >= 3:
         return True and bool(svg)
     
     # Use SVG if content appears to be heavily diagrammatic
     diagram_indicators = ['diagram', 'figure', 'chart', 'graph', 'table']
-    markdown_lower = markdown.lower()
-    if any(re.search(r'\b' + re.escape(indicator) + r'\b', markdown_lower)
-           for indicator in diagram_indicators):
-        return True and bool(svg)
+    try:
+        markdown_lower = markdown.lower()
+        if any(re.search(r'\b' + re.escape(indicator) + r'\b', markdown_lower)
+               for indicator in diagram_indicators):
+            return True and bool(svg)
+    except re.error as e:
+        logger.warning(f"Regex error in diagram_indicators matching: {e}. Using safe fallback.")
+        # If regex fails, use simple string containment check
+        markdown_lower = markdown.lower()
+        if any(indicator in markdown_lower for indicator in diagram_indicators):
+            return True and bool(svg)
     
     # Use SVG if the content is very short (likely a single equation/diagram)
     if len(markdown.strip()) < 50 and svg:
@@ -426,7 +445,16 @@ def extract_keywords(text: str) -> List[str]:
                   'differentiate', 'integrate', 'solve', 'find', 'calculate', 'prove']
     
     # Extract words that might be important
-    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    words = []
+    math_symbols = []
+    try:
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+        # Add mathematical symbols and expressions
+        math_symbols = re.findall(r'[+\-*/=^()∫∑√π∞≤≥≠±∂∇]|\d+', text)
+    except re.error as e:
+        logger.warning(f"Regex error in keyword extraction: {e}. Using safe fallback.")
+        # If regex fails, split by spaces and filter
+        words = [word.lower() for word in text.split() if len(word) >= 3 and word.isalpha()]
     
     # Filter for mathematical terms and proper nouns
     keywords = []
@@ -434,8 +462,6 @@ def extract_keywords(text: str) -> List[str]:
         if word in math_terms or word.istitle() or len(word) > 6:
             keywords.append(word)
     
-    # Add mathematical symbols and expressions
-    math_symbols = re.findall(r'[+\-*/=^()∫∑√π∞≤≥≠±∂∇]|\d+', text)
     keywords.extend(math_symbols)
     
     return list(set(keywords))  # Remove duplicates
@@ -651,23 +677,44 @@ def classify_question(content: str, filename: str) -> dict:
         "Chemistry": ['chemistry', 'molecule', 'reaction', 'element'],
         "Applied Mathematics": ['applied', 'statistics', 'probability'],
     }
-    for subj, keywords in subject_keywords.items():
-        if any(re.search(r'\b' + re.escape(term) + r'\b', content_lower)
-               for term in keywords):
-            subject = subj
-            break
+    # Subject classification with regex safety
+    try:
+        for subj, keywords in subject_keywords.items():
+            if any(re.search(r'\b' + re.escape(term) + r'\b', content_lower)
+                   for term in keywords):
+                subject = subj
+                break
+    except re.error as e:
+        logger.warning(f"Regex error in subject classification: {e}. Using safe fallback.")
+        # Fallback to simple string containment
+        for subj, keywords in subject_keywords.items():
+            if any(term in content_lower for term in keywords):
+                subject = subj
+                break
     
     # Year detection from filename
-    year_match = re.search(r'20\d{2}', filename_lower)
-    estimated_year = int(year_match.group()) if year_match else None
+    estimated_year = None
+    try:
+        year_match = re.search(r'20\d{2}', filename_lower)
+        estimated_year = int(year_match.group()) if year_match else None
+    except re.error as e:
+        logger.warning(f"Regex error in year detection: {e}")
     
     # Question type detection
     question_type = "short_answer"  # Default
     mc_indicators = ['a)', 'b)', 'c)', 'd)', 'multiple choice']
-    if any(re.search(re.escape(term), content_lower) for term in mc_indicators):
-        question_type = "multiple_choice"
-    elif len(content) > 500:
-        question_type = "essay"
+    try:
+        if any(re.search(re.escape(term), content_lower) for term in mc_indicators):
+            question_type = "multiple_choice"
+        elif len(content) > 500:
+            question_type = "essay"
+    except re.error as e:
+        logger.warning(f"Regex error in question type detection: {e}. Using safe fallback.")
+        # Fallback to simple string containment
+        if any(term in content_lower for term in mc_indicators):
+            question_type = "multiple_choice"
+        elif len(content) > 500:
+            question_type = "essay"
     
     # Topic extraction (simple keyword matching)
     topics = []
@@ -679,10 +726,18 @@ def classify_question(content: str, filename: str) -> dict:
         'statistics': ['mean', 'median', 'standard deviation', 'probability']
     }
     
-    for topic, keywords in topic_keywords.items():
-        if any(re.search(r'\b' + re.escape(keyword) + r'\b', content_lower)
-               for keyword in keywords):
-            topics.append(topic)
+    # Topic extraction with regex safety
+    try:
+        for topic, keywords in topic_keywords.items():
+            if any(re.search(r'\b' + re.escape(keyword) + r'\b', content_lower)
+                   for keyword in keywords):
+                topics.append(topic)
+    except re.error as e:
+        logger.warning(f"Regex error in topic extraction: {e}. Using safe fallback.")
+        # Fallback to simple string containment
+        for topic, keywords in topic_keywords.items():
+            if any(keyword in content_lower for keyword in keywords):
+                topics.append(topic)
     
     return {
         'subject': subject,
