@@ -15,8 +15,8 @@ export const GlassCard = ({ children, className = '', animate = true, ...props }
 
   if (animate) {
     return (
-      <motion.div
-        className={`gen-glass-card p-6 ${className}`}
+        <motion.div
+          className={`rounded-panel backdrop-blur-lg bg-panel-gradient border border-white/20 shadow-glass transition-all p-6 ${className}`}
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -30,7 +30,7 @@ export const GlassCard = ({ children, className = '', animate = true, ...props }
   }
 
   return (
-    <div className={`gen-glass-card p-6 ${className}`} {...props}>
+      <div className={`rounded-panel backdrop-blur-lg bg-panel-gradient border border-white/20 shadow-glass transition-all p-6 ${className}`} {...props}>
       {children}
     </div>
   );
@@ -44,7 +44,11 @@ export const GlassButton = ({
   type = 'button',
   ...props 
 }) => {
-  const baseClass = `gen-button ${variant === 'primary' ? 'gen-button-primary' : 'gen-button-secondary'}`;
+    const baseClass = `rounded-chip px-6 py-3 font-semibold tracking-wide transition-all ${
+      variant === 'primary'
+        ? 'bg-accent-gradient text-white animate-pulseGlow'
+        : 'bg-panel-gradient text-electric-cyan border border-electric-cyan/30 backdrop-blur-lg'
+    }`;
 
   return (
     <motion.button

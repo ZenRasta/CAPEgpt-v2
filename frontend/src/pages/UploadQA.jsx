@@ -278,7 +278,7 @@ export default function UploadQA() {
       >
         <div className="text-center mb-12">
           <motion.h1 
-            className="text-5xl md:text-6xl font-extrabold mb-6 gen-gradient-text tracking-tight"
+            className="text-5xl md:text-6xl font-extrabold mb-6 bg-accent-gradient bg-clip-text text-transparent tracking-tight"
             animate={{ 
               textShadow: [
                 "0 0 20px rgba(35, 240, 255, 0.5)",
@@ -303,7 +303,7 @@ export default function UploadQA() {
       >
         <div className="max-w-2xl mx-auto">
           <GlassCard className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-center gen-gradient-text tracking-wide">
+            <h2 className="text-2xl font-bold mb-6 text-center bg-accent-gradient bg-clip-text text-transparent tracking-wide">
               UPLOAD QUESTION IMAGE
             </h2>
             
@@ -341,7 +341,7 @@ export default function UploadQA() {
 
               {selectedFile && (
                 <motion.div
-                  className="mt-6 gen-glass-card p-4 bg-lime-slush/20"
+                  className="mt-6 rounded-panel backdrop-blur-lg bg-panel-gradient p-4 border border-white/20 shadow-glass bg-lime-slush/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3 }}
@@ -363,7 +363,7 @@ export default function UploadQA() {
       >
         <div className="max-w-2xl mx-auto">
           <GlassCard className="p-8">
-            <h2 className="text-2xl font-bold mb-6 text-center gen-gradient-text tracking-wide">
+            <h2 className="text-2xl font-bold mb-6 text-center bg-accent-gradient bg-clip-text text-transparent tracking-wide">
               ✍️ SUBMIT YOUR ANSWER FOR FEEDBACK 📝
             </h2>
             
@@ -396,7 +396,7 @@ export default function UploadQA() {
                 
                 {answerFile && (
                   <motion.div 
-                    className="mt-4 gen-glass-card p-3 bg-bubblegum-pink/20"
+                    className="mt-4 rounded-panel backdrop-blur-lg bg-panel-gradient p-3 border border-white/20 shadow-glass bg-bubblegum-pink/20"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.3 }}
@@ -462,7 +462,7 @@ export default function UploadQA() {
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                   className="w-16 h-16 border-4 border-electric-cyan border-t-transparent rounded-full mx-auto mb-6"
                 />
-                <h3 className="text-2xl font-bold gen-gradient-text mb-4">PROCESSING...</h3>
+                <h3 className="text-2xl font-bold bg-accent-gradient bg-clip-text text-transparent mb-4">PROCESSING...</h3>
                 <p className="text-white/80 text-lg font-medium">{processingStage}</p>
               </div>
             </GlassCard>
@@ -481,7 +481,9 @@ export default function UploadQA() {
           <div className="max-w-4xl mx-auto">
             <GlassCard className="p-8">
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold gen-gradient-text mb-4">🤖 AI ANALYSIS</h2>
+                <h2 className="text-3xl font-bold bg-accent-gradient bg-clip-text text-transparent mb-4">
+                  <span aria-hidden="true">🤖</span> AI ANALYSIS
+                </h2>
                 <p className="text-white/80 text-lg">Here's your comprehensive solution!</p>
               </div>
               

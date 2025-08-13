@@ -58,7 +58,7 @@ function Popular() {
     >
       <section className="container mx-auto px-4">
         <motion.h1 
-          className="text-5xl md:text-6xl font-extrabold mb-12 text-center gen-gradient-text tracking-tight"
+          className="text-5xl md:text-6xl font-extrabold mb-12 text-center bg-accent-gradient bg-clip-text text-transparent tracking-tight"
           animate={{ 
             textShadow: [
               "0 0 20px rgba(255, 93, 162, 0.5)",
@@ -151,7 +151,7 @@ function Scoreboard() {
     >
       <section className="container mx-auto px-4">
         <motion.h1 
-          className="text-5xl md:text-6xl font-extrabold mb-12 text-center gen-gradient-text tracking-tight"
+          className="text-5xl md:text-6xl font-extrabold mb-12 text-center bg-accent-gradient bg-clip-text text-transparent tracking-tight"
           animate={{ 
             textShadow: [
               "0 0 20px rgba(145, 70, 255, 0.5)",
@@ -166,15 +166,15 @@ function Scoreboard() {
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <motion.div variants={sectionVariants}>
-            <h2 className="text-3xl font-bold mb-8 text-center gen-gradient-text tracking-wide">
-              TOP STUDENTS 🌟
+            <h2 className="text-3xl font-bold mb-8 text-center bg-accent-gradient bg-clip-text text-transparent tracking-wide">
+              TOP STUDENTS <span aria-hidden="true">🌟</span>
             </h2>
             <GlassCard className="p-8">
               <div className="space-y-6">
                 {students.map((student, index) => (
                   <motion.div 
                     key={student.name}
-                    className="flex items-center justify-between p-4 gen-glass-card hover:scale-102 transition-transform"
+                    className="flex items-center justify-between p-4 rounded-panel backdrop-blur-lg bg-panel-gradient border border-white/20 shadow-glass hover:shadow-glass-hover hover:scale-102 transition-transform"
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
@@ -192,15 +192,15 @@ function Scoreboard() {
           </motion.div>
 
           <motion.div variants={sectionVariants}>
-            <h2 className="text-3xl font-bold mb-8 text-center gen-gradient-text tracking-wide">
-              TOP SCHOOLS 🏫
+            <h2 className="text-3xl font-bold mb-8 text-center bg-accent-gradient bg-clip-text text-transparent tracking-wide">
+              TOP SCHOOLS <span aria-hidden="true">🏫</span>
             </h2>
             <GlassCard className="p-8">
               <div className="space-y-6">
                 {schools.map((school, index) => (
                   <motion.div 
                     key={school.name}
-                    className="flex items-center justify-between p-4 gen-glass-card hover:scale-102 transition-transform"
+                    className="flex items-center justify-between p-4 rounded-panel backdrop-blur-lg bg-panel-gradient border border-white/20 shadow-glass hover:shadow-glass-hover hover:scale-102 transition-transform"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}

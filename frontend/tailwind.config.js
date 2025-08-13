@@ -6,8 +6,6 @@ export default {
   safelist: [
     'w-[300px]',
     'h-[300px]',
-    'btn-primary',
-    'btn-secondary',
     'bg-hero-radial'
   ],
   theme: {
@@ -37,7 +35,14 @@ export default {
       backgroundImage: {
         'hero-radial': 'radial-gradient(ellipse at top left, var(--tw-gradient-stops))',
         'hero-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'glass-gradient': 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+        'bg-gradient': 'linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%)',
+        'panel-gradient': 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+        'chip-gradient': 'linear-gradient(135deg, rgba(35,240,255,0.1), rgba(35,240,255,0.05))',
+        'accent-gradient': 'linear-gradient(135deg, #23F0FF 0%, #9146FF 50%, #FF5DA2 100%)',
+      },
+      borderRadius: {
+        panel: '1.5rem',
+        chip: '9999px',
       },
       animation: {
         fadeIn: 'fadeIn 0.2s ease-out',

@@ -266,7 +266,7 @@ const latexRegex = new RegExp(safePattern, "i");
 
 ### Styling
 
-The frontend uses Tailwind CSS for styling. Modify `frontend/src/index.css` for custom styles.
+The frontend uses Tailwind CSS for styling. Customize styles with utility classes and `frontend/tailwind.config.js`.
 
 ## Deployment
 
