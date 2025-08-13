@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Home from './pages/Home';
 import UploadQA from './pages/UploadQA';
 import QuestionViewer from './components/QuestionViewer';
+import Settings from './pages/Settings';
 import { GlassCard, GlassButton } from './components/GlassCard';
 import { motion } from 'framer-motion';
 import FullPageSpinner from './components/FullPageSpinner';
@@ -231,6 +232,7 @@ function AppRoutes() {
       <Route path="/question/:id" element={<Protected><QuestionViewer /></Protected>} />
       <Route path="/popular" element={<Protected><Popular /></Protected>} />
       <Route path="/scoreboard" element={<Protected><Scoreboard /></Protected>} />
+      <Route path="/settings" element={<Protected><Settings /></Protected>} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
