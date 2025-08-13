@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { GlassCard, GlassButton } from '../components/GlassCard';
+import DropZone from '../components/DropZone';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -15,7 +16,6 @@ export default function UploadQA() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [answerFile, setAnswerFile] = useState(null);
   const [answer, setAnswer] = useState('');
-  const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [processingStage, setProcessingStage] = useState('');
@@ -39,21 +39,9 @@ export default function UploadQA() {
     }
   };
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  };
-
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
-    
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       setSelectedFile(e.dataTransfer.files[0]);
     }
@@ -275,15 +263,6 @@ export default function UploadQA() {
     >
       {/* Hidden file inputs */}
       <input
-        ref={fileInputRef}
-        type="file"
-        name="file"
-        accept=".png,.jpg,.jpeg,.pdf"
-        onChange={handleFileSelect}
-        className="sr-only"
-        aria-label="Upload question file"
-      />
-      <input
         ref={answerFileInputRef}
         type="file"
         name="answerFile"
@@ -329,18 +308,14 @@ export default function UploadQA() {
             </h2>
             
             {/* Drag & Drop Area */}
-            <div 
-              className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all mb-6 ${
-                dragActive 
-                  ? 'border-electric-cyan bg-electric-cyan/10' 
-                  : 'border-white/30 hover:border-lime-slush/50'
-              }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
+            <DropZone
+              ref={fileInputRef}
               onDrop={handleDrop}
+              onChange={handleFileSelect}
+              disabled={processing}
+              className="relative p-12 text-center mb-6"
             >
-              <motion.div 
+              <motion.div
                 className="w-20 h-20 bg-gradient-to-r from-lime-slush to-electric-cyan rounded-full flex items-center justify-center mx-auto mb-6"
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
@@ -355,17 +330,17 @@ export default function UploadQA() {
                 PNG, JPG, PDF • Max file size: 10MB
               </p>
               
-              <GlassButton 
-                variant="secondary" 
+              <GlassButton
+                variant="secondary"
                 className="w-full flex items-center justify-center gap-3 font-bold tracking-wide"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={processing}
               >
                 📂 CHOOSE FILE
               </GlassButton>
-              
+
               {selectedFile && (
-                <motion.div 
+                <motion.div
                   className="mt-6 gen-glass-card p-4 bg-lime-slush/20"
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -376,7 +351,7 @@ export default function UploadQA() {
                   </p>
                 </motion.div>
               )}
-            </div>
+            </DropZone>
           </GlassCard>
         </div>
       </motion.section>
