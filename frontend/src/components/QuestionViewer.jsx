@@ -149,7 +149,7 @@ function QuestionViewer() {
 
     return (
       <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-xl space-y-6">
-        <h3 className="text-2xl font-bold text-gray-800 gradient-text">Question Details 📊</h3>
+        <h3 className="text-2xl font-bold text-gray-800 gen-gradient-text">Question Details 📊</h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
@@ -207,7 +207,7 @@ function QuestionViewer() {
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="spinner mx-auto mb-4"></div>
+              <div className="w-6 h-6 border-4 border-electric-cyan border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-600 text-lg font-semibold">Loading question... 🚀</p>
             </div>
           </div>
@@ -242,7 +242,7 @@ function QuestionViewer() {
       {/* Header */}
       <header className="bg-blue-600 text-white sticky top-0 z-10 shadow-md">
         <nav className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold gradient-text">CAPE·GPT 🚀</h1>
+          <h1 className="text-2xl font-bold gen-gradient-text">CAPE·GPT 🚀</h1>
           <button
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-white hover:text-blue-200 transition-colors font-semibold"
@@ -256,7 +256,7 @@ function QuestionViewer() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Page Title */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2 gradient-text">
+          <h1 className="text-4xl font-bold text-gray-800 mb-2 gen-gradient-text">
             Question Viewer 📖
           </h1>
           <p className="text-xl text-gray-600">
@@ -270,7 +270,7 @@ function QuestionViewer() {
         {/* Original Image Reference */}
         {question?.signed_url && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2 gradient-text">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2 gen-gradient-text">
               <span>📷</span>
               Original Image
             </h2>
@@ -295,7 +295,7 @@ function QuestionViewer() {
 
         {/* Processed Content */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2 gradient-text">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2 gen-gradient-text">
             <span>🔍</span>
             Processed Content
           </h2>
