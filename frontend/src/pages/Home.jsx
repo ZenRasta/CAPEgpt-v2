@@ -54,8 +54,8 @@ export default function Home() {
           className="container mx-auto text-center relative z-10"
           variants={heroVariants}
         >
-          <motion.h1 
-            className="text-6xl md:text-7xl font-extrabold mb-6 gen-gradient-text tracking-tight"
+            <motion.h1
+              className="text-6xl md:text-7xl font-extrabold mb-6 bg-accent-gradient bg-clip-text text-transparent tracking-tight"
             animate={{ 
               textShadow: [
                 "0 0 20px rgba(35, 240, 255, 0.5)",
@@ -85,8 +85,8 @@ export default function Home() {
 
       {/* Quick Examples */}
       <section className="container mx-auto px-4 py-16">
-        <motion.h2 
-          className="text-4xl md:text-5xl font-bold mb-12 text-center gen-gradient-text tracking-wide"
+          <motion.h2
+            className="text-4xl md:text-5xl font-bold mb-12 text-center bg-accent-gradient bg-clip-text text-transparent tracking-wide"
           variants={heroVariants}
         >
           QUICK VIBES EXAMPLES 🤩
@@ -97,8 +97,8 @@ export default function Home() {
           variants={containerVariants}
         >
           <motion.div variants={cardVariants}>
-            <GlassCard className="text-center p-8 hover:scale-105 transition-transform">
-              <div className="text-4xl mb-4">📐</div>
+              <GlassCard className="text-center p-8 hover:scale-105 transition-transform">
+                <div className="text-4xl mb-4" aria-hidden="true">📐</div>
               <h3 className="text-xl font-bold mb-4 text-electric-cyan tracking-wide">
                 DIFFERENTIATE F(X) = X²Eˣ
               </h3>
@@ -109,8 +109,8 @@ export default function Home() {
           </motion.div>
 
           <motion.div variants={cardVariants}>
-            <GlassCard className="text-center p-8 hover:scale-105 transition-transform">
-              <div className="text-4xl mb-4">🚀</div>
+              <GlassCard className="text-center p-8 hover:scale-105 transition-transform">
+                <div className="text-4xl mb-4" aria-hidden="true">🚀</div>
               <h3 className="text-xl font-bold mb-4 text-lime-slush tracking-wide">
                 PROJECTILE MOTION: MAX HEIGHT
               </h3>
@@ -125,15 +125,16 @@ export default function Home() {
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-16">
         <motion.div variants={cardVariants}>
-          <GlassCard className="text-center p-12 max-w-2xl mx-auto">
-            <motion.div 
-              className="text-6xl mb-6"
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              📸
-            </motion.div>
-            <h3 className="text-3xl font-bold mb-4 gen-gradient-text tracking-wide">
+            <GlassCard className="text-center p-12 max-w-2xl mx-auto">
+              <motion.div
+                className="text-6xl mb-6"
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                aria-hidden="true"
+              >
+                📸
+              </motion.div>
+              <h3 className="text-3xl font-bold mb-4 bg-accent-gradient bg-clip-text text-transparent tracking-wide">
               DROP YOUR QUESTION
             </h3>
             <p className="text-lg text-white/80 mb-8 font-medium">

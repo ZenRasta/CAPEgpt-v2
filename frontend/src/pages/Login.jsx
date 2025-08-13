@@ -54,8 +54,8 @@ function Login() {
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <motion.h1 
-            className="text-4xl font-extrabold gen-gradient-text mb-4 tracking-tight"
+            <motion.h1
+              className="text-4xl font-extrabold bg-accent-gradient bg-clip-text text-transparent mb-4 tracking-tight"
             animate={{ 
               textShadow: [
                 "0 0 20px rgba(35, 240, 255, 0.5)",
@@ -74,8 +74,8 @@ function Login() {
 
         {/* Error Message */}
         {error && (
-          <motion.div 
-            className="mb-6 p-4 gen-glass-card bg-red-500/20 border border-red-400/30"
+            <motion.div
+              className="mb-6 p-4 rounded-panel backdrop-blur-lg bg-panel-gradient border border-red-400/30 shadow-glass"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
@@ -88,26 +88,28 @@ function Login() {
         {/* Auth Buttons */}
         <div className="space-y-4">
           {/* Google OAuth Button */}
-          <motion.button
-            onClick={handleGoogleSignIn}
-            disabled={loading}
-            className="btn-primary w-full flex items-center justify-center gap-3"
+            <motion.button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              aria-label="Continue with Google"
+              className="w-full flex items-center justify-center gap-3 rounded-panel bg-accent-gradient text-white font-bold tracking-wide py-4 px-6 transition-all hover:scale-102 active:scale-98"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             {loading ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-6 h-6 border-2 border-electric-cyan border-t-transparent rounded-full"
-              />
-            ) : (
-              <>
-                <SiGoogle className="w-6 h-6" />
-                <span className="font-bold text-white tracking-wide">CONTINUE WITH GOOGLE</span>
-              </>
-            )}
-          </motion.button>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-6 h-6 border-2 border-electric-cyan border-t-transparent rounded-full"
+                  aria-hidden="true"
+                />
+              ) : (
+                <>
+                  <SiGoogle className="w-6 h-6" aria-hidden="true" />
+                  <span className="font-bold text-white tracking-wide">CONTINUE WITH GOOGLE</span>
+                </>
+              )}
+            </motion.button>
 
         </div>
 
@@ -119,12 +121,14 @@ function Login() {
         </div>
 
         {/* Guest Mode */}
-        <button
-          onClick={handleGuestMode}
-          className="btn-secondary w-full flex items-center justify-center gap-3"
-        >
-          🎟️ Continue as Guest
-        </button>
+          <button
+            onClick={handleGuestMode}
+            aria-label="Continue as guest"
+            className="w-full flex items-center justify-center gap-3 rounded-panel bg-panel-gradient text-electric-cyan border border-electric-cyan/30 backdrop-blur-lg font-bold tracking-wide py-4 px-6 transition-all hover:scale-102 active:scale-98"
+          >
+            <span aria-hidden="true">🎟️</span>
+            <span>Continue as Guest</span>
+          </button>
 
         {/* Footer */}
         <p className="text-center text-xs text-white/60 mt-6 font-medium">
